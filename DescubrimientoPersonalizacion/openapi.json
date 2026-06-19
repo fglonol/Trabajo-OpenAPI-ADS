@@ -1,0 +1,474 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "DescubrimientoPersonalizacion API",
+    "version": "v1",
+    "description": "Hace descubrible y personalizado el contenido: búsqueda, feeds personalizados, contenido relacionado, tendencias, captura de señales de comportamiento e indexación. Guarda SOLO referencias y puntajes de ranking, no la metadata editorial completa (que vive en Catálogo)."
+  },
+  "servers": [
+    { "url": "http://localhost:5003" }
+  ],
+  "security": [
+    { "ApiKey": [] }
+  ],
+  "paths": {
+    "/api/index": {
+      "post": {
+        "tags": ["Index"],
+        "summary": "RF-D6: Upsert de un contenido en el índice (Id = catalogItemId).",
+        "operationId": "upsertIndex",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/IndexContentRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contenido actualizado.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/IndexedContentResponse" }
+              }
+            }
+          },
+          "201": {
+            "description": "Contenido creado en el índice.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/IndexedContentResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/index/{id}": {
+      "get": {
+        "tags": ["Index"],
+        "summary": "RF-D6: Obtiene un contenido indexado por su Id (catalogItemId).",
+        "operationId": "getIndexById",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdPath" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contenido indexado.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/IndexedContentResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Index"],
+        "summary": "RF-D6: Elimina un contenido del índice (despublicación).",
+        "operationId": "deleteIndex",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdPath" }
+        ],
+        "responses": {
+          "204": { "description": "Contenido eliminado del índice." },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/search": {
+      "get": {
+        "tags": ["Search"],
+        "summary": "RF-D1: Busca contenido por título o etiquetas, ordenado por RankingScore.",
+        "operationId": "search",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "description": "Término de búsqueda (título o etiqueta).",
+            "schema": { "type": "string" }
+          },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resultados de búsqueda paginados.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PagedResultSearchResultItem" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/feed": {
+      "get": {
+        "tags": ["Feed"],
+        "summary": "RF-D2: Feed personalizado del usuario (boost por intereses).",
+        "operationId": "getFeed",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "description": "Usuario para el que se personaliza el feed.",
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Feed personalizado paginado.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PagedResultFeedItem" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/content/{id}/related": {
+      "get": {
+        "tags": ["Content"],
+        "summary": "RF-D3: Contenido relacionado (comparte >=1 etiqueta), por RankingScore.",
+        "operationId": "getRelated",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdPath" },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contenido relacionado paginado.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PagedResultSearchResultItem" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/trending": {
+      "get": {
+        "tags": ["Trending"],
+        "summary": "RF-D4: Contenido en tendencia, ordenado por TrendingScore.",
+        "operationId": "getTrending",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tendencias paginadas.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PagedResultTrendingItem" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/signals": {
+      "post": {
+        "tags": ["Signals"],
+        "summary": "RF-D5: Registra una señal y actualiza ranking/tendencia/intereses.",
+        "operationId": "captureSignal",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SignalRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Señal registrada.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Signal" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API Key requerida en el header X-API-Key."
+      }
+    },
+    "parameters": {
+      "IdPath": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Identificador del contenido (catalogItemId, UUID).",
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "Page": {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "Número de página (1-based).",
+        "schema": { "type": "integer", "format": "int32", "default": 1, "minimum": 1 }
+      },
+      "PageSize": {
+        "name": "pageSize",
+        "in": "query",
+        "required": false,
+        "description": "Tamaño de página (máx. 100).",
+        "schema": { "type": "integer", "format": "int32", "default": 20, "minimum": 1, "maximum": 100 }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Error de validación.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "API Key ausente o inválida.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Recurso no encontrado.",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "SignalType": {
+        "type": "string",
+        "enum": ["View", "Click", "Like", "Search", "WatchTime"],
+        "description": "Tipo de señal de comportamiento (RF-D5)."
+      },
+      "IndexedContent": {
+        "type": "object",
+        "description": "Referencia indexada de un contenido publicado (RF-D6).",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "channelId": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "rankingScore": { "type": "number", "format": "double" },
+          "trendingScore": { "type": "number", "format": "double" },
+          "impressionCount": { "type": "integer", "format": "int64" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "tags": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ContentTag" }
+          }
+        }
+      },
+      "ContentTag": {
+        "type": "object",
+        "description": "Etiqueta hija de IndexedContent usada para búsqueda y relacionados.",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "indexedContentId": { "type": "string", "format": "uuid" },
+          "value": { "type": "string" }
+        }
+      },
+      "Signal": {
+        "type": "object",
+        "description": "Señal de comportamiento capturada de un usuario sobre un contenido (RF-D5).",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "contentId": { "type": "string", "format": "uuid" },
+          "type": { "$ref": "#/components/schemas/SignalType" },
+          "weight": { "type": "number", "format": "double" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "UserInterest": {
+        "type": "object",
+        "description": "Interés inferido de un usuario derivado de las etiquetas del contenido (RF-D2).",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "interest": { "type": "string" },
+          "score": { "type": "number", "format": "double" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "IndexContentRequest": {
+        "type": "object",
+        "description": "Cuerpo del upsert de indexación (RF-D6).",
+        "required": ["id", "title"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "description": "catalogItemId de Catálogo." },
+          "channelId": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      },
+      "IndexedContentResponse": {
+        "type": "object",
+        "description": "Representación de un contenido indexado devuelta por la API.",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "channelId": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "rankingScore": { "type": "number", "format": "double" },
+          "trendingScore": { "type": "number", "format": "double" },
+          "impressionCount": { "type": "integer", "format": "int64" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      },
+      "SearchResultItem": {
+        "type": "object",
+        "description": "Resultado de búsqueda / relacionados (RF-D1, RF-D3). Solo referencias.",
+        "properties": {
+          "contentId": { "type": "string", "format": "uuid" },
+          "channelId": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "rankingScore": { "type": "number", "format": "double" },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      },
+      "FeedItem": {
+        "type": "object",
+        "description": "Elemento del feed personalizado (RF-D2). Solo referencias.",
+        "properties": {
+          "contentId": { "type": "string", "format": "uuid" },
+          "channelId": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "rankingScore": { "type": "number", "format": "double" },
+          "personalizedScore": { "type": "number", "format": "double" },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      },
+      "TrendingItem": {
+        "type": "object",
+        "description": "Elemento de tendencias (RF-D4). Solo referencias.",
+        "properties": {
+          "contentId": { "type": "string", "format": "uuid" },
+          "channelId": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "trendingScore": { "type": "number", "format": "double" },
+          "impressionCount": { "type": "integer", "format": "int64" },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      },
+      "SignalRequest": {
+        "type": "object",
+        "description": "Cuerpo para registrar una señal de comportamiento (RF-D5).",
+        "required": ["userId", "contentId", "type"],
+        "properties": {
+          "userId": { "type": "string", "format": "uuid" },
+          "contentId": { "type": "string", "format": "uuid" },
+          "type": { "$ref": "#/components/schemas/SignalType" },
+          "weight": { "type": "number", "format": "double", "description": "Si es 0 o negativo se usa 1." }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "description": "Formato de error consistente entre los 6 bounded contexts.",
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "details": { "type": "object", "nullable": true }
+        }
+      },
+      "PagedResultSearchResultItem": {
+        "type": "object",
+        "description": "Envoltura de paginación de SearchResultItem.",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/SearchResultItem" }
+          },
+          "page": { "type": "integer", "format": "int32" },
+          "pageSize": { "type": "integer", "format": "int32" },
+          "totalItems": { "type": "integer", "format": "int32" },
+          "totalPages": { "type": "integer", "format": "int32" }
+        }
+      },
+      "PagedResultFeedItem": {
+        "type": "object",
+        "description": "Envoltura de paginación de FeedItem.",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/FeedItem" }
+          },
+          "page": { "type": "integer", "format": "int32" },
+          "pageSize": { "type": "integer", "format": "int32" },
+          "totalItems": { "type": "integer", "format": "int32" },
+          "totalPages": { "type": "integer", "format": "int32" }
+        }
+      },
+      "PagedResultTrendingItem": {
+        "type": "object",
+        "description": "Envoltura de paginación de TrendingItem.",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TrendingItem" }
+          },
+          "page": { "type": "integer", "format": "int32" },
+          "pageSize": { "type": "integer", "format": "int32" },
+          "totalItems": { "type": "integer", "format": "int32" },
+          "totalPages": { "type": "integer", "format": "int32" }
+        }
+      }
+    }
+  }
+}

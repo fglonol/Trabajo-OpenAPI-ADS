@@ -1,0 +1,62 @@
+data:image/png;base64,BASE64_PLACEHOLDER_DIAGRAMA_CLASES_AudienciaComunidadEngagement
+
+```mermaid
+classDiagram
+    class Subscription {
+        +Guid Id
+        +Guid UserId
+        +Guid ChannelId
+        +DateTime CreatedAt
+    }
+    class Reaction {
+        +Guid Id
+        +Guid UserId
+        +Guid CatalogItemId
+        +ReactionType Type
+        +DateTime CreatedAt
+    }
+    class ReactionType {
+        <<enumeration>>
+        Like
+        Dislike
+    }
+    class Comment {
+        +Guid Id
+        +Guid UserId
+        +Guid CatalogItemId
+        +Guid? ParentCommentId
+        +string Text
+        +DateTime CreatedAt
+        +DateTime? EditedAt
+    }
+    class Notification {
+        +Guid Id
+        +Guid UserId
+        +string Type
+        +string Message
+        +bool IsRead
+        +DateTime CreatedAt
+    }
+    class WatchHistoryEntry {
+        +Guid Id
+        +Guid UserId
+        +Guid CatalogItemId
+        +int PositionSeconds
+        +DateTime WatchedAt
+    }
+    class WatchLaterItem {
+        +Guid Id
+        +Guid UserId
+        +Guid CatalogItemId
+        +DateTime AddedAt
+    }
+    class CommunityPost {
+        +Guid Id
+        +Guid ChannelId
+        +string Text
+        +DateTime CreatedAt
+    }
+
+    Reaction --> ReactionType : Type
+    Comment --> Comment : ParentCommentId (auto-referencia)
+```

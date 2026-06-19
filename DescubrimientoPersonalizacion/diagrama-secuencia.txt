@@ -1,0 +1,35 @@
+data:image/png;base64,BASE64_PLACEHOLDER_DIAGRAMA_SECUENCIA_DescubrimientoPersonalizacion
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Cliente
+    participant API as DescubrimientoPersonalizacion API
+    participant DB as MySQL (youtube_descubrimiento)
+
+    Note over Cliente,DB: 1) Capturar señal (POST /api/signals)
+    Cliente->>API: POST /api/signals { userId, contentId, type, weight }
+    API->>DB: SELECT IndexedContent (Include Tags) WHERE Id = contentId
+    alt contenido no indexado
+        DB-->>API: null
+        API-->>Cliente: 404 NOT_FOUND
+    else contenido indexado
+        DB-->>API: IndexedContent + Tags
+        Note over API: 2) Actualizar ranking
+        API->>API: RankingScore += weight; TrendingScore += weight; ImpressionCount += 1
+        API->>API: upsert UserInterest por cada Tag (Score += weight)
+        API->>DB: INSERT Signal + UPDATE IndexedContent + UPSERT UserInterest
+        DB-->>API: OK
+        API-->>Cliente: 201 Created (Signal)
+    end
+
+    Note over Cliente,DB: 3) Servir feed (GET /api/feed)
+    Cliente->>API: GET /api/feed?userId=...&page=&pageSize=
+    API->>DB: SELECT UserInterest WHERE UserId = userId
+    DB-->>API: intereses (Interest -> Score)
+    API->>DB: SELECT IndexedContent (Include Tags)
+    DB-->>API: contenidos + Tags
+    API->>API: PersonalizedScore = RankingScore + sum(Score de intereses que matchean Tags)
+    API->>API: OrderByDescending(PersonalizedScore) + paginar
+    API-->>Cliente: 200 OK PagedResult~FeedItem~
+```

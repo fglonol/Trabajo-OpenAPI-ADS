@@ -1,0 +1,54 @@
+data:image/png;base64,BASE64_PLACEHOLDER_DIAGRAMA_CLASES_DescubrimientoPersonalizacion
+
+```mermaid
+classDiagram
+    class IndexedContent {
+        +Guid Id
+        +Guid ChannelId
+        +string Title
+        +double RankingScore
+        +double TrendingScore
+        +long ImpressionCount
+        +DateTime CreatedAt
+        +DateTime UpdatedAt
+        +ICollection~ContentTag~ Tags
+    }
+
+    class ContentTag {
+        +Guid Id
+        +Guid IndexedContentId
+        +string Value
+        +IndexedContent IndexedContent
+    }
+
+    class Signal {
+        +Guid Id
+        +Guid UserId
+        +Guid ContentId
+        +SignalType Type
+        +double Weight
+        +DateTime CreatedAt
+    }
+
+    class UserInterest {
+        +Guid Id
+        +Guid UserId
+        +string Interest
+        +double Score
+        +DateTime UpdatedAt
+    }
+
+    class SignalType {
+        <<enumeration>>
+        View
+        Click
+        Like
+        Search
+        WatchTime
+    }
+
+    IndexedContent "1" *-- "0..*" ContentTag : Tags
+    Signal --> "1" SignalType : Type
+    Signal ..> IndexedContent : ContentId (referencia)
+    UserInterest ..> ContentTag : derivado de Value
+```

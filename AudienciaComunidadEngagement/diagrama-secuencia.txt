@@ -1,0 +1,25 @@
+data:image/png;base64,BASE64_PLACEHOLDER_DIAGRAMA_SECUENCIA_AudienciaComunidadEngagement
+
+```mermaid
+sequenceDiagram
+    actor Usuario
+    participant API as AudienciaComunidadEngagement (5004)
+    participant Catalogo as CatalogoEditorialDerechos (5002)
+    participant DB as MySQL youtube_audiencia
+
+    Usuario->>API: POST /api/comments (o /api/reactions)
+    Note over API: valida UserId / CatalogItemId no vacíos
+    API->>Catalogo: GET /api/catalogitems/{catalogItemId}
+    alt Catálogo responde 200 (item publicado)
+        Catalogo-->>API: 200 OK (item válido)
+        API->>DB: INSERT Comment / upsert Reaction
+        DB-->>API: OK
+        API->>DB: INSERT Notification (Type=NewComment/NewReaction)
+        DB-->>API: OK
+        API-->>Usuario: 201 Created (CommentDto / ReactionDto)
+    else Catálogo no responde o item no existe
+        Catalogo-->>API: error / 404
+        Note over API: consistencia eventual: rechaza (400/409) o acepta optimista segun politica
+        API-->>Usuario: 400 VALIDATION_ERROR
+    end
+```

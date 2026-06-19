@@ -1,0 +1,79 @@
+================================================================================
+INTEGRACIÓN - BOUNDED CONTEXT: AudienciaComunidadEngagement (puerto 5004)
+Base de datos: youtube_audiencia
+Responsabilidad: relación de la audiencia con el contenido y la comunidad
+(suscripciones, reacciones, comentarios, notificaciones, historial/listas de
+visualización y publicaciones de comunidad). Referencia channelId y catalogItemId
+por UUID; NO almacena metadata del video ni del canal.
+================================================================================
+
+--------------------------------------------------------------------------------
+1. DEPENDENCIAS SALIENTES (endpoints que ESTE servicio consume)
+--------------------------------------------------------------------------------
+Hacia CatalogoEditorialDerechos (http://localhost:5002):
+
+- GET http://localhost:5002/api/catalogitems/{id}
+    Valida que el catalogItemId referenciado exista y esté publicado antes de
+    aceptar reacciones, comentarios e historial de visualización.
+
+- GET http://localhost:5002/api/channels/{id}
+    Valida que el channelId exista antes de aceptar una suscripción
+    (POST /api/subscriptions) o una publicación de comunidad
+    (POST /api/community).
+
+Todas las llamadas salientes envían el header X-API-Key.
+
+--------------------------------------------------------------------------------
+2. DEPENDENCIAS ENTRANTES (endpoints que ESTE servicio expone a otros)
+--------------------------------------------------------------------------------
+Consumidos por MonetizacionEcosistemaCreador (puerto 5005):
+
+- GET http://localhost:5004/api/subscriptions/count?channelId={id}
+    Devuelve { channelId, count }. Usado para evaluar elegibilidad de
+    monetización (umbral mínimo de suscriptores).
+
+- GET http://localhost:5004/api/history?userId={id}&page=&pageSize=
+    Métricas de historial de visualización; insumo para señales de engagement y
+    elegibilidad del programa de creadores.
+
+Otros endpoints expuestos (uso general del frontend / otros contextos):
+  /api/subscriptions, /api/reactions (+ /summary), /api/comments,
+  /api/notifications (+ /{id}/read, /read-all), /api/history,
+  /api/watchlater, /api/community.
+
+--------------------------------------------------------------------------------
+3. ORDEN DE LLAMADAS EN FLUJO DE COMENTARIO / REACCIÓN + NOTIFICACIÓN
+--------------------------------------------------------------------------------
+1) El usuario envía POST /api/comments (o POST /api/reactions) a 5004.
+2) 5004 valida los datos de entrada (UserId, CatalogItemId, Text/Type).
+3) 5004 -> GET 5002/api/catalogitems/{catalogItemId} para confirmar que el
+   contenido existe y está publicado.
+4) Si es válido: 5004 persiste el comentario (INSERT) o hace upsert de la
+   reacción por (UserId, CatalogItemId).
+5) 5004 genera una Notification (POST interno / INSERT) dirigida al destinatario
+   (p.ej. el dueño del contenido) con Type = "NewComment" / "NewReaction".
+6) 5004 responde 201/200 al usuario con el DTO resultante.
+
+--------------------------------------------------------------------------------
+4. CONSISTENCIA EVENTUAL (qué hacer si Catálogo no responde / contenido despublicado)
+--------------------------------------------------------------------------------
+- Catálogo (5002) no responde o expira la llamada:
+    Política recomendada para escritura de engagement: ACEPTACIÓN OPTIMISTA.
+    Como AudienciaComunidadEngagement solo guarda UUIDs (no metadata), puede
+    aceptar la reacción/comentario y revalidar después de forma asíncrona.
+    Política alternativa (más estricta): RECHAZAR con 400 VALIDATION_ERROR si la
+    validación del catálogo es obligatoria por reglas de negocio.
+    La implementación actual valida solo formato/no-vacío localmente; la llamada
+    al catálogo es un punto de extensión y su indisponibilidad NO debe tumbar el
+    servicio (degradación elegante).
+
+- Contenido despublicado o eliminado en Catálogo después de tener engagement:
+    Los comentarios/reacciones/historial existentes se conservan (referencian un
+    UUID; no se borran en cascada desde aquí). La capa de presentación que
+    consume Catálogo simplemente dejará de mostrar el contenido despublicado, y
+    sus reacciones/comentarios quedan huérfanos pero íntegros. Una tarea de
+    limpieza/auditoría puede purgarlos de forma diferida si se desea.
+
+- Notificaciones: si la generación de la notificación falla tras persistir el
+  comentario/reacción, la acción principal NO se revierte; la notificación se
+  considera best-effort (reintentable de forma asíncrona).

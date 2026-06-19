@@ -1,0 +1,66 @@
+INTEGRACIÓN — Bounded Context: DescubrimientoPersonalizacion (puerto 5003)
+============================================================================
+Responsabilidad: hace descubrible y personalizado el contenido (búsqueda, feeds,
+relacionados, tendencias, señales e indexación). Guarda SOLO referencias y puntajes;
+la metadata editorial completa vive en Catálogo.
+
+----------------------------------------------------------------------------
+DEPENDENCIAS SALIENTES (endpoints que este servicio consume)
+----------------------------------------------------------------------------
+- Catálogo (puerto 5002):
+    GET http://localhost:5002/api/catalogitems/{id}
+    Uso: hidratar la metadata editorial completa (descripción, duración, miniaturas,
+    visibilidad, etc.) de cada item devuelto por /api/search, /api/feed,
+    /api/content/{id}/related y /api/trending. El índice local solo guarda
+    referencias + un Title ligero, por lo que el consumidor (o un BFF) llama a
+    Catálogo por cada ContentId para completar la vista final.
+
+----------------------------------------------------------------------------
+DEPENDENCIAS ENTRANTES (endpoints que este servicio expone y quién los llama)
+----------------------------------------------------------------------------
+- Catálogo (o el proceso de publicación):
+    POST   http://localhost:5003/api/index        -> al publicar/actualizar un contenido,
+                                                      hace upsert de la referencia indexada
+                                                      (Id = catalogItemId).
+    DELETE http://localhost:5003/api/index/{id}    -> al despublicar, elimina la referencia
+                                                      del índice (cascada borra ContentTags).
+- Publicidad / Marketplace de Anunciantes:
+    GET    http://localhost:5003/api/trending      -> consulta tendencias como contexto de
+                                                      targeting de campañas.
+- Clientes / front (lectura):
+    GET    /api/search?q=...                        búsqueda (RF-D1)
+    GET    /api/feed?userId=...                     feed personalizado (RF-D2)
+    GET    /api/content/{id}/related                contenido relacionado (RF-D3)
+    GET    /api/trending                            tendencias (RF-D4)
+    POST   /api/signals                             captura de señales (RF-D5)
+
+Todas las llamadas requieren el header X-API-Key.
+
+----------------------------------------------------------------------------
+ORDEN DE LLAMADAS EN UN FLUJO DE REPRODUCCIÓN (Descubrimiento -> Catálogo -> Publicación)
+----------------------------------------------------------------------------
+1. El usuario abre el feed:    GET 5003 /api/feed?userId=...
+   -> Descubrimiento devuelve referencias (ContentId) ordenadas por puntaje personalizado.
+2. Hidratación de metadata:    GET 5002 /api/catalogitems/{id} (Catálogo) por cada ContentId.
+   -> Catálogo devuelve la metadata editorial y la visibilidad actual.
+3. Reproducción:               el cliente resuelve el stream/manifest contra Publicación
+                               (puerto 5001) usando el id del contenido.
+4. Telemetría de vuelta:       POST 5003 /api/signals (View/WatchTime/Like/Click)
+   -> Descubrimiento sube RankingScore/TrendingScore, ImpressionCount y los intereses
+      del usuario, retroalimentando los futuros feeds y tendencias.
+
+----------------------------------------------------------------------------
+CONSISTENCIA EVENTUAL (qué pasa si un servicio no responde / un video se despublica)
+----------------------------------------------------------------------------
+- El índice es una proyección eventual de Catálogo: puede quedar desactualizado entre
+  el momento de la publicación/despublicación y la recepción del POST/DELETE /api/index.
+- Al hidratar contra Catálogo (GET /api/catalogitems/{id}):
+    * 404 (no existe) o contenido Private/oculto  -> se OMITE ese item del resultado
+      final, aunque siga apareciendo en el índice. El índice se reconcilia cuando llegue
+      el DELETE /api/index/{id} correspondiente.
+    * Catálogo no responde / timeout              -> degradar mostrando solo las
+      referencias con el Title ligero del índice, o reintentar; nunca bloquear el feed.
+- Si una señal apunta a un ContentId no indexado, POST /api/signals responde 404
+  NOT_FOUND y NO actualiza puntajes (la señal se descarta para evitar puntuar fantasmas).
+- La eliminación en el índice es en cascada: borrar IndexedContent borra sus ContentTags;
+  los UserInterest y Signals históricos se conservan (son derivados/auditoría).

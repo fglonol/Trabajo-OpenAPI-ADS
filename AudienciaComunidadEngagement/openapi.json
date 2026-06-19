@@ -1,0 +1,673 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "AudienciaComunidadEngagement API",
+    "version": "v1",
+    "description": "Gestiona la relación de la audiencia con el contenido y la comunidad: suscripciones, reacciones (like/dislike), comentarios, notificaciones, historial/listas de visualización y publicaciones de comunidad del canal. Referencia channelId y catalogItemId por UUID; no almacena metadata del video ni del canal."
+  },
+  "servers": [
+    { "url": "http://localhost:5004" }
+  ],
+  "security": [
+    { "ApiKey": [] }
+  ],
+  "paths": {
+    "/api/subscriptions": {
+      "post": {
+        "tags": ["Subscriptions"],
+        "summary": "RF-A1: crea una suscripción (409 si ya existe).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateSubscriptionDto" } }
+          }
+        },
+        "responses": {
+          "201": { "description": "Creada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SubscriptionDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      },
+      "get": {
+        "tags": ["Subscriptions"],
+        "summary": "RF-A1: lista suscripciones filtrando por userId/channelId.",
+        "parameters": [
+          { "name": "userId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "channelId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultSubscriptionDto" } } } }
+        }
+      }
+    },
+    "/api/subscriptions/{id}": {
+      "get": {
+        "tags": ["Subscriptions"],
+        "summary": "RF-A1: obtiene una suscripción por Id.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SubscriptionDto" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Subscriptions"],
+        "summary": "RF-A1: cancela una suscripción.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "responses": {
+          "204": { "description": "Sin contenido" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/subscriptions/count": {
+      "get": {
+        "tags": ["Subscriptions"],
+        "summary": "RF-A1: cantidad de suscriptores de un canal (consumido por Monetización).",
+        "parameters": [
+          { "name": "channelId", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SubscriberCountDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/reactions": {
+      "post": {
+        "tags": ["Reactions"],
+        "summary": "RF-A2: upsert de una reacción (crea o actualiza el Type).",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateReactionDto" } } }
+        },
+        "responses": {
+          "200": { "description": "Actualizada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReactionDto" } } } },
+          "201": { "description": "Creada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReactionDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      },
+      "get": {
+        "tags": ["Reactions"],
+        "summary": "RF-A2: lista reacciones de un item del catálogo.",
+        "parameters": [
+          { "name": "catalogItemId", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultReactionDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/reactions/{id}": {
+      "get": {
+        "tags": ["Reactions"],
+        "summary": "RF-A2: obtiene una reacción por Id.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReactionDto" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Reactions"],
+        "summary": "RF-A2: quita una reacción.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "responses": {
+          "204": { "description": "Sin contenido" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/reactions/summary": {
+      "get": {
+        "tags": ["Reactions"],
+        "summary": "RF-A2: resumen de likes/dislikes de un item.",
+        "parameters": [
+          { "name": "catalogItemId", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReactionSummaryDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/comments": {
+      "post": {
+        "tags": ["Comments"],
+        "summary": "RF-A3: crea un comentario o respuesta.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateCommentDto" } } }
+        },
+        "responses": {
+          "201": { "description": "Creado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommentDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      },
+      "get": {
+        "tags": ["Comments"],
+        "summary": "RF-A3: lista comentarios por catalogItemId y/o parentCommentId.",
+        "parameters": [
+          { "name": "catalogItemId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "parentCommentId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultCommentDto" } } } }
+        }
+      }
+    },
+    "/api/comments/{id}": {
+      "get": {
+        "tags": ["Comments"],
+        "summary": "RF-A3: obtiene un comentario por Id.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommentDto" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Comments"],
+        "summary": "RF-A3: edita el texto de un comentario.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateCommentDto" } } }
+        },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommentDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Comments"],
+        "summary": "RF-A3: elimina un comentario.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "responses": {
+          "204": { "description": "Sin contenido" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/notifications": {
+      "post": {
+        "tags": ["Notifications"],
+        "summary": "RF-A4: crea una notificación.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateNotificationDto" } } }
+        },
+        "responses": {
+          "201": { "description": "Creada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NotificationDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      },
+      "get": {
+        "tags": ["Notifications"],
+        "summary": "RF-A4: lista notificaciones por userId y/o isRead.",
+        "parameters": [
+          { "name": "userId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "isRead", "in": "query", "schema": { "type": "boolean" } },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultNotificationDto" } } } }
+        }
+      }
+    },
+    "/api/notifications/{id}": {
+      "get": {
+        "tags": ["Notifications"],
+        "summary": "RF-A4: obtiene una notificación por Id.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NotificationDto" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/notifications/{id}/read": {
+      "post": {
+        "tags": ["Notifications"],
+        "summary": "RF-A4: marca una notificación como leída.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NotificationDto" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/notifications/read-all": {
+      "post": {
+        "tags": ["Notifications"],
+        "summary": "RF-A4: marca como leídas todas las notificaciones de un usuario.",
+        "parameters": [
+          { "name": "userId", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "204": { "description": "Sin contenido" },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/history": {
+      "post": {
+        "tags": ["History"],
+        "summary": "RF-A5: registra/actualiza (upsert) la posición de visualización.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RecordWatchDto" } } }
+        },
+        "responses": {
+          "200": { "description": "Actualizada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WatchHistoryEntryDto" } } } },
+          "201": { "description": "Creada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WatchHistoryEntryDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      },
+      "get": {
+        "tags": ["History"],
+        "summary": "RF-A5: lista el historial de un usuario (más reciente primero).",
+        "parameters": [
+          { "name": "userId", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultWatchHistoryEntryDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/history/{id}": {
+      "get": {
+        "tags": ["History"],
+        "summary": "RF-A5: obtiene una entrada de historial por Id.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WatchHistoryEntryDto" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/watchlater": {
+      "post": {
+        "tags": ["WatchLater"],
+        "summary": "RF-A5: agrega un item a 'ver más tarde' (409 si ya existe).",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateWatchLaterDto" } } }
+        },
+        "responses": {
+          "201": { "description": "Creado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WatchLaterItemDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      },
+      "get": {
+        "tags": ["WatchLater"],
+        "summary": "RF-A5: lista los items 'ver más tarde' de un usuario.",
+        "parameters": [
+          { "name": "userId", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultWatchLaterItemDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/watchlater/{id}": {
+      "get": {
+        "tags": ["WatchLater"],
+        "summary": "RF-A5: obtiene un item 'ver más tarde' por Id.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WatchLaterItemDto" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["WatchLater"],
+        "summary": "RF-A5: elimina un item de 'ver más tarde'.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "responses": {
+          "204": { "description": "Sin contenido" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/community": {
+      "post": {
+        "tags": ["Community"],
+        "summary": "RF-A6: crea una publicación de comunidad.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateCommunityPostDto" } } }
+        },
+        "responses": {
+          "201": { "description": "Creada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunityPostDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      },
+      "get": {
+        "tags": ["Community"],
+        "summary": "RF-A6: lista publicaciones de comunidad de un canal (más reciente primero).",
+        "parameters": [
+          { "name": "channelId", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultCommunityPostDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/community/{id}": {
+      "get": {
+        "tags": ["Community"],
+        "summary": "RF-A6: obtiene una publicación de comunidad por Id.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunityPostDto" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Community"],
+        "summary": "RF-A6: elimina una publicación de comunidad.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "responses": {
+          "204": { "description": "Sin contenido" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API Key requerida en el header X-API-Key."
+      }
+    },
+    "parameters": {
+      "Id": {
+        "name": "id", "in": "path", "required": true,
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "Page": {
+        "name": "page", "in": "query",
+        "schema": { "type": "integer", "minimum": 1, "default": 1 },
+        "description": "Número de página (mínimo 1)."
+      },
+      "PageSize": {
+        "name": "pageSize", "in": "query",
+        "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 },
+        "description": "Tamaño de página (1-100, por defecto 20)."
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Error de validación",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+      },
+      "NotFound": {
+        "description": "Recurso no encontrado",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+      },
+      "Conflict": {
+        "description": "Conflicto",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+      }
+    },
+    "schemas": {
+      "ReactionType": {
+        "type": "string",
+        "enum": ["Like", "Dislike"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "details": { "nullable": true }
+        }
+      },
+      "Subscription": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "channelId": { "type": "string", "format": "uuid" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Reaction": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "catalogItemId": { "type": "string", "format": "uuid" },
+          "type": { "$ref": "#/components/schemas/ReactionType" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Comment": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "catalogItemId": { "type": "string", "format": "uuid" },
+          "parentCommentId": { "type": "string", "format": "uuid", "nullable": true },
+          "text": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "editedAt": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "Notification": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "type": { "type": "string" },
+          "message": { "type": "string" },
+          "isRead": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "WatchHistoryEntry": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "catalogItemId": { "type": "string", "format": "uuid" },
+          "positionSeconds": { "type": "integer" },
+          "watchedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "WatchLaterItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "catalogItemId": { "type": "string", "format": "uuid" },
+          "addedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CommunityPost": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "channelId": { "type": "string", "format": "uuid" },
+          "text": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateSubscriptionDto": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string", "format": "uuid" },
+          "channelId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "SubscriptionDto": { "$ref": "#/components/schemas/Subscription" },
+      "SubscriberCountDto": {
+        "type": "object",
+        "properties": {
+          "channelId": { "type": "string", "format": "uuid" },
+          "count": { "type": "integer" }
+        }
+      },
+      "CreateReactionDto": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string", "format": "uuid" },
+          "catalogItemId": { "type": "string", "format": "uuid" },
+          "type": { "$ref": "#/components/schemas/ReactionType" }
+        }
+      },
+      "ReactionDto": { "$ref": "#/components/schemas/Reaction" },
+      "ReactionSummaryDto": {
+        "type": "object",
+        "properties": {
+          "catalogItemId": { "type": "string", "format": "uuid" },
+          "likes": { "type": "integer" },
+          "dislikes": { "type": "integer" }
+        }
+      },
+      "CreateCommentDto": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string", "format": "uuid" },
+          "catalogItemId": { "type": "string", "format": "uuid" },
+          "parentCommentId": { "type": "string", "format": "uuid", "nullable": true },
+          "text": { "type": "string" }
+        }
+      },
+      "UpdateCommentDto": {
+        "type": "object",
+        "properties": {
+          "text": { "type": "string" }
+        }
+      },
+      "CommentDto": { "$ref": "#/components/schemas/Comment" },
+      "CreateNotificationDto": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string", "format": "uuid" },
+          "type": { "type": "string" },
+          "message": { "type": "string" }
+        }
+      },
+      "NotificationDto": { "$ref": "#/components/schemas/Notification" },
+      "RecordWatchDto": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string", "format": "uuid" },
+          "catalogItemId": { "type": "string", "format": "uuid" },
+          "positionSeconds": { "type": "integer" }
+        }
+      },
+      "WatchHistoryEntryDto": { "$ref": "#/components/schemas/WatchHistoryEntry" },
+      "CreateWatchLaterDto": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string", "format": "uuid" },
+          "catalogItemId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "WatchLaterItemDto": { "$ref": "#/components/schemas/WatchLaterItem" },
+      "CreateCommunityPostDto": {
+        "type": "object",
+        "properties": {
+          "channelId": { "type": "string", "format": "uuid" },
+          "text": { "type": "string" }
+        }
+      },
+      "CommunityPostDto": { "$ref": "#/components/schemas/CommunityPost" },
+      "PagedResultSubscriptionDto": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/SubscriptionDto" } },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "totalItems": { "type": "integer" },
+          "totalPages": { "type": "integer" }
+        }
+      },
+      "PagedResultReactionDto": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/ReactionDto" } },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "totalItems": { "type": "integer" },
+          "totalPages": { "type": "integer" }
+        }
+      },
+      "PagedResultCommentDto": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/CommentDto" } },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "totalItems": { "type": "integer" },
+          "totalPages": { "type": "integer" }
+        }
+      },
+      "PagedResultNotificationDto": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/NotificationDto" } },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "totalItems": { "type": "integer" },
+          "totalPages": { "type": "integer" }
+        }
+      },
+      "PagedResultWatchHistoryEntryDto": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/WatchHistoryEntryDto" } },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "totalItems": { "type": "integer" },
+          "totalPages": { "type": "integer" }
+        }
+      },
+      "PagedResultWatchLaterItemDto": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/WatchLaterItemDto" } },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "totalItems": { "type": "integer" },
+          "totalPages": { "type": "integer" }
+        }
+      },
+      "PagedResultCommunityPostDto": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/CommunityPostDto" } },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "totalItems": { "type": "integer" },
+          "totalPages": { "type": "integer" }
+        }
+      }
+    }
+  }
+}
