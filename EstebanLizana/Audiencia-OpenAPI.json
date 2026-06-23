@@ -3,7 +3,7 @@
   "info": {
     "title": "AudienciaComunidadEngagement API",
     "version": "v1",
-    "description": "Gestiona la relación de la audiencia con el contenido y la comunidad: suscripciones, reacciones (like/dislike), comentarios, notificaciones, historial/listas de visualización y publicaciones de comunidad del canal. Referencia channelId y catalogItemId por UUID; no almacena metadata del video ni del canal."
+    "description": "Gestiona la relación de la audiencia con el contenido y la comunidad: suscripciones, reacciones (like/dislike), comentarios, notificaciones, historial/listas de visualización y publicaciones de comunidad del canal. Referencia channelId, catalogItemId y communityPostId por UUID. No almacena metadata del video ni del canal. Se asume consistencia eventual: los eventos recibidos pueden procesarse con cierto retraso; las visibilidades de contenido se actualizan asíncronamente. La API Key identifica al usuario; todas las operaciones deben validar que el userId del payload coincida con el usuario autenticado."
   },
   "servers": [
     { "url": "http://localhost:5004" }
@@ -26,7 +26,8 @@
           "201": { "description": "Creada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SubscriptionDto" } } } },
           "400": { "$ref": "#/components/responses/BadRequest" },
           "409": { "$ref": "#/components/responses/Conflict" }
-        }
+        },
+        "x-authorization": "El userId del cuerpo debe coincidir con el usuario autenticado."
       },
       "get": {
         "tags": ["Subscriptions"],
@@ -39,7 +40,8 @@
         ],
         "responses": {
           "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultSubscriptionDto" } } } }
-        }
+        },
+        "x-authorization": "Si se filtra por userId, debe coincidir con el usuario autenticado."
       }
     },
     "/api/subscriptions/{id}": {
@@ -50,7 +52,8 @@
         "responses": {
           "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SubscriptionDto" } } } },
           "404": { "$ref": "#/components/responses/NotFound" }
-        }
+        },
+        "x-authorization": "El usuario autenticado debe ser el propietario de la suscripción."
       },
       "delete": {
         "tags": ["Subscriptions"],
@@ -59,7 +62,8 @@
         "responses": {
           "204": { "description": "Sin contenido" },
           "404": { "$ref": "#/components/responses/NotFound" }
-        }
+        },
+        "x-authorization": "El usuario autenticado debe ser el propietario de la suscripción."
       }
     },
     "/api/subscriptions/count": {
@@ -72,13 +76,14 @@
         "responses": {
           "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SubscriberCountDto" } } } },
           "400": { "$ref": "#/components/responses/BadRequest" }
-        }
+        },
+        "x-authorization": "Acceso permitido a sistemas internos (servicio a servicio)."
       }
     },
     "/api/reactions": {
       "post": {
         "tags": ["Reactions"],
-        "summary": "RF-A2: upsert de una reacción (crea o actualiza el Type).",
+        "summary": "RF-A2: upsert de una reacción (crea o actualiza el Type) sobre un ítem del catálogo.",
         "requestBody": {
           "required": true,
           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateReactionDto" } } }
@@ -87,7 +92,8 @@
           "200": { "description": "Actualizada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReactionDto" } } } },
           "201": { "description": "Creada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReactionDto" } } } },
           "400": { "$ref": "#/components/responses/BadRequest" }
-        }
+        },
+        "x-authorization": "El userId del cuerpo debe coincidir con el usuario autenticado."
       },
       "get": {
         "tags": ["Reactions"],
@@ -111,7 +117,8 @@
         "responses": {
           "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReactionDto" } } } },
           "404": { "$ref": "#/components/responses/NotFound" }
-        }
+        },
+        "x-authorization": "El usuario autenticado debe ser el propietario de la reacción."
       },
       "delete": {
         "tags": ["Reactions"],
@@ -120,7 +127,8 @@
         "responses": {
           "204": { "description": "Sin contenido" },
           "404": { "$ref": "#/components/responses/NotFound" }
-        }
+        },
+        "x-authorization": "El usuario autenticado debe ser el propietario de la reacción."
       }
     },
     "/api/reactions/summary": {
@@ -139,7 +147,7 @@
     "/api/comments": {
       "post": {
         "tags": ["Comments"],
-        "summary": "RF-A3: crea un comentario o respuesta.",
+        "summary": "RF-A3: crea un comentario o respuesta sobre un ítem del catálogo.",
         "requestBody": {
           "required": true,
           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateCommentDto" } } }
@@ -147,7 +155,8 @@
         "responses": {
           "201": { "description": "Creado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommentDto" } } } },
           "400": { "$ref": "#/components/responses/BadRequest" }
-        }
+        },
+        "x-authorization": "El userId del cuerpo debe coincidir con el usuario autenticado."
       },
       "get": {
         "tags": ["Comments"],
@@ -185,7 +194,8 @@
           "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommentDto" } } } },
           "400": { "$ref": "#/components/responses/BadRequest" },
           "404": { "$ref": "#/components/responses/NotFound" }
-        }
+        },
+        "x-authorization": "El usuario autenticado debe ser el autor del comentario."
       },
       "delete": {
         "tags": ["Comments"],
@@ -194,13 +204,66 @@
         "responses": {
           "204": { "description": "Sin contenido" },
           "404": { "$ref": "#/components/responses/NotFound" }
-        }
+        },
+        "x-authorization": "El usuario autenticado debe ser el autor del comentario o el creador del contenido asociado."
+      }
+    },
+    "/api/comments/{id}/pin": {
+      "post": {
+        "tags": ["Comments"],
+        "summary": "RF-A3: fija o desfija un comentario destacado (toggle).",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pinned": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommentDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "x-authorization": "El usuario autenticado debe ser el creador del contenido (canal) al que pertenece el comentario."
+      }
+    },
+    "/api/comments/{id}/report": {
+      "post": {
+        "tags": ["Comments"],
+        "summary": "RF-A3: reporta un comentario inapropiado.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "Reporte registrado" },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "x-authorization": "El usuario autenticado debe ser un usuario registrado."
       }
     },
     "/api/notifications": {
       "post": {
         "tags": ["Notifications"],
-        "summary": "RF-A4: crea una notificación.",
+        "summary": "RF-A4: crea una notificación (uso interno, normalmente generado por eventos).",
         "requestBody": {
           "required": true,
           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateNotificationDto" } } }
@@ -208,7 +271,8 @@
         "responses": {
           "201": { "description": "Creada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NotificationDto" } } } },
           "400": { "$ref": "#/components/responses/BadRequest" }
-        }
+        },
+        "x-authorization": "Solo para uso interno (sistemas)."
       },
       "get": {
         "tags": ["Notifications"],
@@ -221,7 +285,8 @@
         ],
         "responses": {
           "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultNotificationDto" } } } }
-        }
+        },
+        "x-authorization": "Si se filtra por userId, debe coincidir con el usuario autenticado."
       }
     },
     "/api/notifications/{id}": {
@@ -232,7 +297,8 @@
         "responses": {
           "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NotificationDto" } } } },
           "404": { "$ref": "#/components/responses/NotFound" }
-        }
+        },
+        "x-authorization": "El usuario autenticado debe ser el destinatario de la notificación."
       }
     },
     "/api/notifications/{id}/read": {
@@ -243,7 +309,8 @@
         "responses": {
           "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NotificationDto" } } } },
           "404": { "$ref": "#/components/responses/NotFound" }
-        }
+        },
+        "x-authorization": "El usuario autenticado debe ser el destinatario de la notificación."
       }
     },
     "/api/notifications/read-all": {
@@ -256,7 +323,42 @@
         "responses": {
           "204": { "description": "Sin contenido" },
           "400": { "$ref": "#/components/responses/BadRequest" }
-        }
+        },
+        "x-authorization": "El userId debe coincidir con el usuario autenticado."
+      }
+    },
+    "/api/notifications/preferences": {
+      "get": {
+        "tags": ["Notifications"],
+        "summary": "RF-A4: obtiene las preferencias de notificación de un usuario.",
+        "parameters": [
+          { "name": "userId", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NotificationPreferencesDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        },
+        "x-authorization": "El userId debe coincidir con el usuario autenticado."
+      },
+      "put": {
+        "tags": ["Notifications"],
+        "summary": "RF-A4: actualiza las preferencias de notificación de un usuario.",
+        "parameters": [
+          { "name": "userId", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateNotificationPreferencesDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NotificationPreferencesDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        },
+        "x-authorization": "El userId debe coincidir con el usuario autenticado."
       }
     },
     "/api/history": {
@@ -271,7 +373,8 @@
           "200": { "description": "Actualizada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WatchHistoryEntryDto" } } } },
           "201": { "description": "Creada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WatchHistoryEntryDto" } } } },
           "400": { "$ref": "#/components/responses/BadRequest" }
-        }
+        },
+        "x-authorization": "El userId del cuerpo debe coincidir con el usuario autenticado."
       },
       "get": {
         "tags": ["History"],
@@ -284,7 +387,20 @@
         "responses": {
           "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultWatchHistoryEntryDto" } } } },
           "400": { "$ref": "#/components/responses/BadRequest" }
-        }
+        },
+        "x-authorization": "El userId debe coincidir con el usuario autenticado."
+      },
+      "delete": {
+        "tags": ["History"],
+        "summary": "RF-A5: borra todo el historial de un usuario (privacidad).",
+        "parameters": [
+          { "name": "userId", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "204": { "description": "Sin contenido" },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        },
+        "x-authorization": "El userId debe coincidir con el usuario autenticado."
       }
     },
     "/api/history/{id}": {
@@ -295,7 +411,18 @@
         "responses": {
           "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WatchHistoryEntryDto" } } } },
           "404": { "$ref": "#/components/responses/NotFound" }
-        }
+        },
+        "x-authorization": "El usuario autenticado debe ser el propietario de la entrada."
+      },
+      "delete": {
+        "tags": ["History"],
+        "summary": "RF-A5: elimina una entrada específica del historial.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "responses": {
+          "204": { "description": "Sin contenido" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "x-authorization": "El usuario autenticado debe ser el propietario de la entrada."
       }
     },
     "/api/watchlater": {
@@ -310,7 +437,8 @@
           "201": { "description": "Creado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WatchLaterItemDto" } } } },
           "400": { "$ref": "#/components/responses/BadRequest" },
           "409": { "$ref": "#/components/responses/Conflict" }
-        }
+        },
+        "x-authorization": "El userId del cuerpo debe coincidir con el usuario autenticado."
       },
       "get": {
         "tags": ["WatchLater"],
@@ -323,7 +451,8 @@
         "responses": {
           "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultWatchLaterItemDto" } } } },
           "400": { "$ref": "#/components/responses/BadRequest" }
-        }
+        },
+        "x-authorization": "El userId debe coincidir con el usuario autenticado."
       }
     },
     "/api/watchlater/{id}": {
@@ -334,7 +463,8 @@
         "responses": {
           "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WatchLaterItemDto" } } } },
           "404": { "$ref": "#/components/responses/NotFound" }
-        }
+        },
+        "x-authorization": "El usuario autenticado debe ser el propietario del item."
       },
       "delete": {
         "tags": ["WatchLater"],
@@ -343,7 +473,8 @@
         "responses": {
           "204": { "description": "Sin contenido" },
           "404": { "$ref": "#/components/responses/NotFound" }
-        }
+        },
+        "x-authorization": "El usuario autenticado debe ser el propietario del item."
       }
     },
     "/api/community": {
@@ -357,7 +488,8 @@
         "responses": {
           "201": { "description": "Creada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunityPostDto" } } } },
           "400": { "$ref": "#/components/responses/BadRequest" }
-        }
+        },
+        "x-authorization": "El usuario autenticado debe ser el creador del canal (channelId)."
       },
       "get": {
         "tags": ["Community"],
@@ -390,7 +522,169 @@
         "responses": {
           "204": { "description": "Sin contenido" },
           "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "x-authorization": "El usuario autenticado debe ser el creador del canal propietario de la publicación."
+      }
+    },
+    "/api/community/{id}/reactions": {
+      "post": {
+        "tags": ["Community"],
+        "summary": "RF-A6: upsert de una reacción a una publicación de comunidad.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": { "type": "string", "format": "uuid" },
+                  "type": { "$ref": "#/components/schemas/ReactionType" }
+                },
+                "required": ["userId", "type"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Actualizada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunityPostReactionDto" } } } },
+          "201": { "description": "Creada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunityPostReactionDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "x-authorization": "El userId del cuerpo debe coincidir con el usuario autenticado."
+      },
+      "get": {
+        "tags": ["Community"],
+        "summary": "RF-A6: lista reacciones de una publicación de comunidad.",
+        "parameters": [
+          { "$ref": "#/components/parameters/Id" },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultCommunityPostReactionDto" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
         }
+      }
+    },
+    "/api/community/{id}/reactions/summary": {
+      "get": {
+        "tags": ["Community"],
+        "summary": "RF-A6: resumen de likes/dislikes de una publicación de comunidad.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReactionSummaryDto" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/community/{id}/comments": {
+      "post": {
+        "tags": ["Community"],
+        "summary": "RF-A6: crea un comentario en una publicación de comunidad.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": { "type": "string", "format": "uuid" },
+                  "text": { "type": "string" },
+                  "parentCommentId": { "type": "string", "format": "uuid", "nullable": true }
+                },
+                "required": ["userId", "text"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Creado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunityPostCommentDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "x-authorization": "El userId del cuerpo debe coincidir con el usuario autenticado."
+      },
+      "get": {
+        "tags": ["Community"],
+        "summary": "RF-A6: lista comentarios de una publicación de comunidad.",
+        "parameters": [
+          { "$ref": "#/components/parameters/Id" },
+          { "name": "parentCommentId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultCommunityPostCommentDto" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/community/comments/{id}": {
+      "get": {
+        "tags": ["Community"],
+        "summary": "Obtiene un comentario de comunidad por Id.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunityPostCommentDto" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Community"],
+        "summary": "Edita un comentario de comunidad.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": { "type": "string" }
+                },
+                "required": ["text"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CommunityPostCommentDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "x-authorization": "El usuario autenticado debe ser el autor del comentario."
+      },
+      "delete": {
+        "tags": ["Community"],
+        "summary": "Elimina un comentario de comunidad.",
+        "parameters": [ { "$ref": "#/components/parameters/Id" } ],
+        "responses": {
+          "204": { "description": "Sin contenido" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        },
+        "x-authorization": "El usuario autenticado debe ser el autor o el creador del canal."
+      }
+    },
+    "/api/events": {
+      "post": {
+        "tags": ["Integration"],
+        "summary": "Punto de entrada para eventos asíncronos de otros contextos (Catálogo, Publicación, etc.).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EventEnvelope" }
+            }
+          }
+        },
+        "responses": {
+          "202": { "description": "Evento aceptado para procesamiento asíncrono" },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        },
+        "x-authorization": "Solo para sistemas internos (API Key de servicio)."
       }
     }
   },
@@ -400,7 +694,7 @@
         "type": "apiKey",
         "in": "header",
         "name": "X-API-Key",
-        "description": "API Key requerida en el header X-API-Key."
+        "description": "API Key requerida en el header X-API-Key. La clave identifica al usuario; el sistema debe validar que el userId en los payloads coincida con el usuario autenticado."
       }
     },
     "parameters": {
@@ -474,7 +768,8 @@
           "parentCommentId": { "type": "string", "format": "uuid", "nullable": true },
           "text": { "type": "string" },
           "createdAt": { "type": "string", "format": "date-time" },
-          "editedAt": { "type": "string", "format": "date-time", "nullable": true }
+          "editedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "pinned": { "type": "boolean", "default": false }
         }
       },
       "Notification": {
@@ -486,6 +781,17 @@
           "message": { "type": "string" },
           "isRead": { "type": "boolean" },
           "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "NotificationPreferences": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string", "format": "uuid" },
+          "emailNotifications": { "type": "boolean" },
+          "pushNotifications": { "type": "boolean" },
+          "newVideo": { "type": "boolean" },
+          "commentReply": { "type": "boolean" },
+          "communityPost": { "type": "boolean" }
         }
       },
       "WatchHistoryEntry": {
@@ -514,6 +820,28 @@
           "channelId": { "type": "string", "format": "uuid" },
           "text": { "type": "string" },
           "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CommunityPostReaction": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "communityPostId": { "type": "string", "format": "uuid" },
+          "type": { "$ref": "#/components/schemas/ReactionType" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CommunityPostComment": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "communityPostId": { "type": "string", "format": "uuid" },
+          "parentCommentId": { "type": "string", "format": "uuid", "nullable": true },
+          "text": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "editedAt": { "type": "string", "format": "date-time", "nullable": true }
         }
       },
       "CreateSubscriptionDto": {
@@ -573,6 +901,17 @@
         }
       },
       "NotificationDto": { "$ref": "#/components/schemas/Notification" },
+      "NotificationPreferencesDto": { "$ref": "#/components/schemas/NotificationPreferences" },
+      "UpdateNotificationPreferencesDto": {
+        "type": "object",
+        "properties": {
+          "emailNotifications": { "type": "boolean" },
+          "pushNotifications": { "type": "boolean" },
+          "newVideo": { "type": "boolean" },
+          "commentReply": { "type": "boolean" },
+          "communityPost": { "type": "boolean" }
+        }
+      },
       "RecordWatchDto": {
         "type": "object",
         "properties": {
@@ -598,6 +937,27 @@
         }
       },
       "CommunityPostDto": { "$ref": "#/components/schemas/CommunityPost" },
+      "CommunityPostReactionDto": { "$ref": "#/components/schemas/CommunityPostReaction" },
+      "CommunityPostCommentDto": { "$ref": "#/components/schemas/CommunityPostComment" },
+      "EventEnvelope": {
+        "type": "object",
+        "properties": {
+          "eventType": {
+            "type": "string",
+            "description": "Tipo de evento: 'ContentPublished', 'ContentUnpublished', 'ContentRestricted', 'ContentUpdated', 'AssetReady', etc."
+          },
+          "source": {
+            "type": "string",
+            "description": "Contexto de origen: 'Catalog', 'Publication', etc."
+          },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "payload": {
+            "type": "object",
+            "description": "Datos específicos del evento, ej. { catalogItemId, channelId, visibility }"
+          }
+        },
+        "required": ["eventType", "payload"]
+      },
       "PagedResultSubscriptionDto": {
         "type": "object",
         "properties": {
@@ -662,6 +1022,26 @@
         "type": "object",
         "properties": {
           "items": { "type": "array", "items": { "$ref": "#/components/schemas/CommunityPostDto" } },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "totalItems": { "type": "integer" },
+          "totalPages": { "type": "integer" }
+        }
+      },
+      "PagedResultCommunityPostReactionDto": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/CommunityPostReactionDto" } },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "totalItems": { "type": "integer" },
+          "totalPages": { "type": "integer" }
+        }
+      },
+      "PagedResultCommunityPostCommentDto": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/CommunityPostCommentDto" } },
           "page": { "type": "integer" },
           "pageSize": { "type": "integer" },
           "totalItems": { "type": "integer" },
