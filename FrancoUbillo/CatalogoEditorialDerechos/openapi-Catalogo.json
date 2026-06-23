@@ -1,0 +1,667 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Catalogo Editorial y Derechos API",
+    "version": "1.0.0",
+    "description": "Bounded context Catálogo, Editorial y Derechos: gestiona canales, items de catálogo (metadata editorial), publicación/visibilidad, restricciones por edad y país, playlists y reclamaciones de derechos. Referencia los assets técnicos por UUID (en Publicación) pero no almacena datos técnicos."
+  },
+  "servers": [
+    { "url": "http://localhost:5002" }
+  ],
+  "security": [
+    { "ApiKey": [] }
+  ],
+  "tags": [
+    { "name": "Canales", "description": "Gestión de canales." },
+    { "name": "CatalogItems", "description": "RF-C2/C3/C6: Items de catálogo, publicación y restricciones." },
+    { "name": "Playlists", "description": "RF-C4: playlists y sus items." },
+    { "name": "Claims", "description": "RF-C5: reclamaciones de derechos." }
+  ],
+  "paths": {
+    "/api/canales": {
+      "get": {
+        "tags": ["Canales"],
+        "summary": "Entrega lista paginada de canales.",
+        "parameters": [
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/PageSizeParam" }
+        ],
+        "responses": {
+          "200": { "description": "Lista paginada de canales.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultOfChannelResponseDto" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Canales"],
+        "summary": "Crea un canal.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateChannelDto" } } } },
+        "responses": {
+          "201": { "description": "Canal creado.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ChannelResponseDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/canales/{id}": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
+      "get": {
+        "tags": ["Canales"],
+        "summary": "Obtiene un canal por id. Consumido por Descubrimiento/Audiencia/Monetización.",
+        "responses": {
+          "200": { "description": "Canal.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ChannelResponseDto" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Canales"],
+        "summary": "Actualiza nombre y descripción de un canal.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateChannelDto" } } } },
+        "responses": {
+          "200": { "description": "Canal actualizado.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ChannelResponseDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Canales"],
+        "summary": "Elimina un canal.",
+        "responses": {
+          "204": { "description": "Canal eliminado." },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/catalogitems": {
+      "get": {
+        "tags": ["CatalogItems"],
+        "summary": "Lista paginada de items. Filtros opcionales channelId y visibility.",
+        "parameters": [
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/PageSizeParam" },
+          { "name": "channelId", "in": "query", "required": false, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "visibility", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Visibility" } }
+        ],
+        "responses": {
+          "200": { "description": "Lista paginada de items.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultOfCatalogItemResponseDto" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["CatalogItems"],
+        "summary": "Crea un item en estado Draft (Title, VideoAssetId, ChannelId).",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateCatalogItemDto" } } } },
+        "responses": {
+          "201": { "description": "Item creado.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CatalogItemResponseDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/catalogitems/{id}": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
+      "get": {
+        "tags": ["CatalogItems"],
+        "summary": "Obtiene un item por id. Consumido por Descubrimiento/Audiencia/Monetización.",
+        "responses": {
+          "200": { "description": "Item de catálogo.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CatalogItemResponseDto" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["CatalogItems"],
+        "summary": "Edita metadata editorial (Title, Description, Tags, ThumbnailUrl).",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateCatalogItemDto" } } } },
+        "responses": {
+          "200": { "description": "Item actualizado.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CatalogItemResponseDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["CatalogItems"],
+        "summary": "Elimina un item de catálogo.",
+        "responses": {
+          "204": { "description": "Item eliminado." },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/catalogitems/{id}/publish": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
+      "post": {
+        "tags": ["CatalogItems"],
+        "summary": "RF-C3: publica el item con visibilidad Public o Unlisted.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PublishCatalogItemDto" } } } },
+        "responses": {
+          "200": { "description": "Item publicado.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CatalogItemResponseDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/catalogitems/{id}/unpublish": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
+      "post": {
+        "tags": ["CatalogItems"],
+        "summary": "RF-C3: despublica el item dejándolo en Private (o Draft).",
+        "responses": {
+          "200": { "description": "Item despublicado.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CatalogItemResponseDto" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/catalogitems/{id}/restrictions": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
+      "put": {
+        "tags": ["CatalogItems"],
+        "summary": "RF-C6: configura edad mínima y restricciones por país.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateRestrictionsDto" } } } },
+        "responses": {
+          "200": { "description": "Restricciones actualizadas.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CatalogItemResponseDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/playlists": {
+      "get": {
+        "tags": ["Playlists"],
+        "summary": "RF-C4: lista paginada de playlists. Filtro opcional channelId.",
+        "parameters": [
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/PageSizeParam" },
+          { "name": "channelId", "in": "query", "required": false, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Lista paginada de playlists.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultOfPlaylistResponseDto" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Playlists"],
+        "summary": "RF-C4: crea una playlist en un canal (ChannelId, Title, Visibility).",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreatePlaylistDto" } } } },
+        "responses": {
+          "201": { "description": "Playlist creada.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PlaylistResponseDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/playlists/{id}": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
+      "get": {
+        "tags": ["Playlists"],
+        "summary": "RF-C4: obtiene una playlist por id incluyendo sus items.",
+        "responses": {
+          "200": { "description": "Playlist.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PlaylistResponseDto" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Playlists"],
+        "summary": "RF-C4: actualiza título y visibilidad de una playlist.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdatePlaylistDto" } } } },
+        "responses": {
+          "200": { "description": "Playlist actualizada.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PlaylistResponseDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Playlists"],
+        "summary": "RF-C4: elimina una playlist y sus items.",
+        "responses": {
+          "204": { "description": "Playlist eliminada." },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/playlists/{id}/items": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
+      "post": {
+        "tags": ["Playlists"],
+        "summary": "RF-C4: agrega un item de catálogo a la playlist en la siguiente posición.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AddPlaylistItemDto" } } } },
+        "responses": {
+          "200": { "description": "Item agregado; playlist actualizada.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PlaylistResponseDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/playlists/{id}/items/{catalogItemId}": {
+      "parameters": [
+        { "$ref": "#/components/parameters/IdPath" },
+        { "name": "catalogItemId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+      ],
+      "delete": {
+        "tags": ["Playlists"],
+        "summary": "RF-C4: quita un item de catálogo de la playlist.",
+        "responses": {
+          "204": { "description": "Item removido." },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/claims": {
+      "get": {
+        "tags": ["Claims"],
+        "summary": "RF-C5: lista paginada de reclamaciones. Filtros opcionales catalogItemId y status.",
+        "parameters": [
+          { "$ref": "#/components/parameters/PageParam" },
+          { "$ref": "#/components/parameters/PageSizeParam" },
+          { "name": "catalogItemId", "in": "query", "required": false, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "status", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/ClaimStatus" } }
+        ],
+        "responses": {
+          "200": { "description": "Lista paginada de reclamaciones.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultOfClaimResponseDto" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Claims"],
+        "summary": "RF-C5: crea una reclamación en estado Pending (CatalogItemId, ClaimantName, Reason).",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateClaimDto" } } } },
+        "responses": {
+          "201": { "description": "Reclamación creada.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ClaimResponseDto" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/claims/{id}": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
+      "get": {
+        "tags": ["Claims"],
+        "summary": "RF-C5: obtiene una reclamación por id.",
+        "responses": {
+          "200": { "description": "Reclamación.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ClaimResponseDto" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/claims/{id}/resolve": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
+      "post": {
+        "tags": ["Claims"],
+        "summary": "RF-C5: resuelve la reclamación (Status=Resolved, ResolvedAt).",
+        "responses": {
+          "200": { "description": "Reclamación resuelta.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ClaimResponseDto" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/claims/{id}/reject": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
+      "post": {
+        "tags": ["Claims"],
+        "summary": "RF-C5: rechaza la reclamación (Status=Rejected, ResolvedAt).",
+        "responses": {
+          "200": { "description": "Reclamación rechazada.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ClaimResponseDto" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API Key requerida en el header X-API-Key."
+      }
+    },
+    "parameters": {
+      "PageParam": {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "description": "Número de página (>= 1).",
+        "schema": { "type": "integer", "format": "int32", "minimum": 1, "default": 1 }
+      },
+      "PageSizeParam": {
+        "name": "pageSize",
+        "in": "query",
+        "required": false,
+        "description": "Tamaño de página (1-100).",
+        "schema": { "type": "integer", "format": "int32", "minimum": 1, "maximum": 100, "default": 20 }
+      },
+      "IdPath": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Error de validación.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+      },
+      "Unauthorized": {
+        "description": "API Key ausente o inválida.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+      },
+      "NotFound": {
+        "description": "Recurso no encontrado.",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } }
+      }
+    },
+    "schemas": {
+      "Visibility": {
+        "type": "string",
+        "enum": ["Draft", "Public", "Unlisted", "Private"]
+      },
+      "RestrictionType": {
+        "type": "string",
+        "enum": ["Allow", "Block"]
+      },
+      "ClaimStatus": {
+        "type": "string",
+        "enum": ["Pending", "Resolved", "Rejected"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "details": { "nullable": true }
+        }
+      },
+      "PagedResult": {
+        "type": "object",
+        "description": "Envoltura genérica de paginación.",
+        "properties": {
+          "items": { "type": "array", "items": {} },
+          "page": { "type": "integer", "format": "int32" },
+          "pageSize": { "type": "integer", "format": "int32" },
+          "totalItems": { "type": "integer", "format": "int32" },
+          "totalPages": { "type": "integer", "format": "int32" }
+        }
+      },
+      "Channel": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "ownerUserId": { "type": "string", "format": "uuid" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CatalogItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "videoAssetId": { "type": "string", "format": "uuid" },
+          "channelId": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "thumbnailUrl": { "type": "string", "nullable": true },
+          "visibility": { "$ref": "#/components/schemas/Visibility" },
+          "minAge": { "type": "integer", "format": "int32" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "tags": { "type": "array", "items": { "$ref": "#/components/schemas/CatalogTag" } },
+          "countryRestrictions": { "type": "array", "items": { "$ref": "#/components/schemas/CountryRestriction" } }
+        }
+      },
+      "CatalogTag": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "catalogItemId": { "type": "string", "format": "uuid" },
+          "value": { "type": "string" }
+        }
+      },
+      "CountryRestriction": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "catalogItemId": { "type": "string", "format": "uuid" },
+          "countryCode": { "type": "string" },
+          "type": { "$ref": "#/components/schemas/RestrictionType" }
+        }
+      },
+      "Playlist": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "channelId": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "visibility": { "$ref": "#/components/schemas/Visibility" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/PlaylistItem" } }
+        }
+      },
+      "PlaylistItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "playlistId": { "type": "string", "format": "uuid" },
+          "catalogItemId": { "type": "string", "format": "uuid" },
+          "position": { "type": "integer", "format": "int32" }
+        }
+      },
+      "Claim": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "catalogItemId": { "type": "string", "format": "uuid" },
+          "claimantName": { "type": "string" },
+          "reason": { "type": "string" },
+          "status": { "$ref": "#/components/schemas/ClaimStatus" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "resolvedAt": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "CreateChannelDto": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "ownerUserId": { "type": "string", "format": "uuid" }
+        }
+      },
+      "UpdateChannelDto": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string", "nullable": true }
+        }
+      },
+      "ChannelResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "ownerUserId": { "type": "string", "format": "uuid" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateCatalogItemDto": {
+        "type": "object",
+        "required": ["videoAssetId", "channelId", "title"],
+        "properties": {
+          "videoAssetId": { "type": "string", "format": "uuid" },
+          "channelId": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" }
+        }
+      },
+      "UpdateCatalogItemDto": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "thumbnailUrl": { "type": "string", "nullable": true },
+          "tags": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "PublishCatalogItemDto": {
+        "type": "object",
+        "properties": {
+          "visibility": { "$ref": "#/components/schemas/Visibility" }
+        }
+      },
+      "CountryRestrictionDto": {
+        "type": "object",
+        "properties": {
+          "countryCode": { "type": "string" },
+          "type": { "$ref": "#/components/schemas/RestrictionType" }
+        }
+      },
+      "UpdateRestrictionsDto": {
+        "type": "object",
+        "properties": {
+          "minAge": { "type": "integer", "format": "int32" },
+          "countryRestrictions": { "type": "array", "items": { "$ref": "#/components/schemas/CountryRestrictionDto" } }
+        }
+      },
+      "CatalogItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "videoAssetId": { "type": "string", "format": "uuid" },
+          "channelId": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "thumbnailUrl": { "type": "string", "nullable": true },
+          "visibility": { "$ref": "#/components/schemas/Visibility" },
+          "minAge": { "type": "integer", "format": "int32" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "countryRestrictions": { "type": "array", "items": { "$ref": "#/components/schemas/CountryRestrictionDto" } }
+        }
+      },
+      "CreatePlaylistDto": {
+        "type": "object",
+        "required": ["channelId", "title"],
+        "properties": {
+          "channelId": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "visibility": { "$ref": "#/components/schemas/Visibility" }
+        }
+      },
+      "UpdatePlaylistDto": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": { "type": "string" },
+          "visibility": { "$ref": "#/components/schemas/Visibility" }
+        }
+      },
+      "AddPlaylistItemDto": {
+        "type": "object",
+        "required": ["catalogItemId"],
+        "properties": {
+          "catalogItemId": { "type": "string", "format": "uuid" },
+          "position": { "type": "integer", "format": "int32" }
+        }
+      },
+      "PlaylistItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "catalogItemId": { "type": "string", "format": "uuid" },
+          "position": { "type": "integer", "format": "int32" }
+        }
+      },
+      "PlaylistResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "channelId": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "visibility": { "$ref": "#/components/schemas/Visibility" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/PlaylistItemResponseDto" } }
+        }
+      },
+      "CreateClaimDto": {
+        "type": "object",
+        "required": ["catalogItemId", "claimantName", "reason"],
+        "properties": {
+          "catalogItemId": { "type": "string", "format": "uuid" },
+          "claimantName": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      },
+      "ClaimResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "catalogItemId": { "type": "string", "format": "uuid" },
+          "claimantName": { "type": "string" },
+          "reason": { "type": "string" },
+          "status": { "$ref": "#/components/schemas/ClaimStatus" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "resolvedAt": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "PagedResultOfChannelResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/ChannelResponseDto" } },
+          "page": { "type": "integer", "format": "int32" },
+          "pageSize": { "type": "integer", "format": "int32" },
+          "totalItems": { "type": "integer", "format": "int32" },
+          "totalPages": { "type": "integer", "format": "int32" }
+        }
+      },
+      "PagedResultOfCatalogItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/CatalogItemResponseDto" } },
+          "page": { "type": "integer", "format": "int32" },
+          "pageSize": { "type": "integer", "format": "int32" },
+          "totalItems": { "type": "integer", "format": "int32" },
+          "totalPages": { "type": "integer", "format": "int32" }
+        }
+      },
+      "PagedResultOfPlaylistResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/PlaylistResponseDto" } },
+          "page": { "type": "integer", "format": "int32" },
+          "pageSize": { "type": "integer", "format": "int32" },
+          "totalItems": { "type": "integer", "format": "int32" },
+          "totalPages": { "type": "integer", "format": "int32" }
+        }
+      },
+      "PagedResultOfClaimResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/ClaimResponseDto" } },
+          "page": { "type": "integer", "format": "int32" },
+          "pageSize": { "type": "integer", "format": "int32" },
+          "totalItems": { "type": "integer", "format": "int32" },
+          "totalPages": { "type": "integer", "format": "int32" }
+        }
+      }
+    }
+  }
+}
