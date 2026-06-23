@@ -1,0 +1,150 @@
+data:image/png;base64,BASE64_PLACEHOLDER_DIAGRAMA_CLASES_MonetizacionEcosistemaCreador
+
+```mermaid
+classDiagram
+    class CreatorEarnings {
+        +Guid Id
+        +Guid ChannelId
+        +Guid CreatorUserId
+        +decimal Balance
+        +string Currency
+        +DateTime UpdatedAt
+    }
+
+    class MonetizationEligibility {
+        +Guid Id
+        +Guid ChannelId
+        +int SubscriberCount
+        +double WatchHours
+        +bool IsEligible
+        +EligibilityStatus Status
+        +DateTime? EvaluatedAt
+    }
+
+    class MonetizationApplication {
+        +Guid Id
+        +Guid ChannelId
+        +Guid CreatorUserId
+        +string? Notes
+        +EligibilityStatus Status
+        +DateTime RequestedAt
+        +DateTime? ReviewedAt
+    }
+
+    class MonetizationProduct {
+        +Guid Id
+        +Guid ChannelId
+        +ProductType Type
+        +string Name
+        +decimal Price
+        +bool IsActive
+        +DateTime CreatedAt
+    }
+
+    class ProductPurchase {
+        +Guid Id
+        +Guid ProductId
+        +Guid ViewerUserId
+        +Guid ChannelId
+        +Guid? CatalogItemId
+        +decimal Amount
+        +string Currency
+        +DateTime PurchasedAt
+    }
+
+    class RevenueEntry {
+        +Guid Id
+        +Guid ChannelId
+        +Guid? VideoId
+        +RevenueSource Source
+        +decimal Amount
+        +decimal PlatformShare
+        +decimal CreatorShare
+        +RevenueStatus Status
+        +DateTime OccurredAt
+    }
+
+    class FiscalDocument {
+        +Guid Id
+        +Guid ChannelId
+        +string DocumentType
+        +string DocumentNumber
+        +string Country
+        +string? FileUrl
+        +FiscalDocumentStatus Status
+        +DateTime SubmittedAt
+        +DateTime? ReviewedAt
+    }
+
+    class Payout {
+        +Guid Id
+        +Guid ChannelId
+        +decimal Amount
+        +decimal MinimumPayoutAmount
+        +Guid? TaxDocumentId
+        +PayoutStatus Status
+        +DateTime RequestedAt
+        +DateTime? PaidAt
+    }
+
+    class EligibilityStatus {
+        <<enum>>
+        NotEvaluated
+        UnderReview
+        Eligible
+        Rejected
+    }
+
+    class ProductType {
+        <<enum>>
+        Membership
+        SuperThanks
+        Ads
+    }
+
+    class RevenueSource {
+        <<enum>>
+        Ads
+        Membership
+        Tip
+    }
+
+    class RevenueStatus {
+        <<enum>>
+        Pending
+        Confirmed
+        Paid
+    }
+
+    class FiscalDocumentStatus {
+        <<enum>>
+        PendingReview
+        Approved
+        Rejected
+    }
+
+    class PayoutStatus {
+        <<enum>>
+        Pending
+        Paid
+        Failed
+    }
+
+    MonetizationEligibility --> EligibilityStatus
+    MonetizationApplication --> EligibilityStatus
+    MonetizationProduct --> ProductType
+    RevenueEntry --> RevenueSource
+    RevenueEntry --> RevenueStatus
+    FiscalDocument --> FiscalDocumentStatus
+    Payout --> PayoutStatus
+
+    CreatorEarnings "1" --> "*" RevenueEntry : agrega ingresos por ChannelId
+    CreatorEarnings "1" --> "*" Payout : descuenta saldo por ChannelId
+    CreatorEarnings "1" --> "1" MonetizationEligibility : mismo ChannelId
+    MonetizationEligibility "1" --> "1" MonetizationApplication : mismo ChannelId
+    MonetizationProduct "*" --> "1" CreatorEarnings : mismo ChannelId
+    MonetizationProduct "1" --> "*" ProductPurchase : origina compras
+    ProductPurchase "1" --> "0..1" RevenueEntry : origina ingreso
+    Payout "*" --> "0..1" FiscalDocument : usa TaxDocumentId
+    FiscalDocument "*" --> "1" CreatorEarnings : mismo ChannelId
+```

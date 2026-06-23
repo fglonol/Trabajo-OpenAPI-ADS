@@ -1,0 +1,328 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>PublicidadMarketplaceAnunciantes</name>
+    </assembly>
+    <members>
+        <member name="T:PublicidadMarketplaceAnunciantes.Common.ApiKeyMiddleware">
+            <summary>Valida la API Key (header X-API-Key) en cada request, salvo rutas públicas.</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Common.ErrorResponse">
+            <summary>Formato de error consistente entre los 6 bounded contexts.</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Common.ExceptionHandlingMiddleware">
+            <summary>Convierte excepciones no controladas al formato de error estándar.</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Common.PagedResult`1">
+            <summary>Envoltura de paginación consistente: ?page=1&amp;pageSize=20.</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Common.PaginationQuery">
+            <summary>Parámetros de paginación: ?page=1&amp;pageSize=20 (pageSize máx. 100).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Controllers.AdServingController">
+            <summary>Ad server (RF-F6): decide qué anuncio entregar según placement y targeting.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.AdServingController.Serve(System.String,System.String,System.String)">
+            <summary>
+            RF-F6: selecciona una campaña Active con presupuesto disponible (Budget &gt; Spend) cuyo
+            targeting coincida (país e interés contenidos en sus CSV; targeting vacío = match-all) y
+            devuelve un creativo elegido. Si no hay relleno, responde 404 con código NO_FILL.
+            </summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.AdServingController.TargetingMatches(PublicidadMarketplaceAnunciantes.Models.Targeting,System.String,System.String)">
+            <summary>
+            Un targeting nulo o con CSV vacío actúa como match-all. Si define países, el país solicitado
+            debe estar contenido; si define intereses, el interés solicitado debe estar contenido.
+            </summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.AdServingController.CsvContains(System.String,System.String)">
+            <summary>Devuelve true si el CSV está vacío (match-all) o contiene el valor (case-insensitive).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Controllers.AdvertisersController">
+            <summary>Gestiona los anunciantes del marketplace (RF-F1): CRUD y listado paginado.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.AdvertisersController.Create(PublicidadMarketplaceAnunciantes.Models.Dtos.CreateAdvertiserRequest)">
+            <summary>RF-F1: crea un anunciante.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.AdvertisersController.List(PublicidadMarketplaceAnunciantes.Common.PaginationQuery)">
+            <summary>RF-F1: listado paginado de anunciantes.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.AdvertisersController.GetById(System.Guid)">
+            <summary>RF-F1: obtiene un anunciante por su Id.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.AdvertisersController.Update(System.Guid,PublicidadMarketplaceAnunciantes.Models.Dtos.UpdateAdvertiserRequest)">
+            <summary>RF-F1: actualiza un anunciante.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.AdvertisersController.Delete(System.Guid)">
+            <summary>RF-F1: elimina un anunciante.</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Controllers.CampaignsController">
+            <summary>Gestiona las campañas publicitarias (RF-F2): CRUD, transiciones de estado y listado paginado.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.CampaignsController.Create(PublicidadMarketplaceAnunciantes.Models.Dtos.CreateCampaignRequest)">
+            <summary>RF-F2: crea una campaña (Status=Draft).</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.CampaignsController.List(PublicidadMarketplaceAnunciantes.Common.PaginationQuery,System.Nullable{System.Guid},System.String)">
+            <summary>RF-F2: listado paginado de campañas, con filtros opcionales por anunciante y estado.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.CampaignsController.GetById(System.Guid)">
+            <summary>RF-F2: obtiene una campaña por su Id.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.CampaignsController.Update(System.Guid,PublicidadMarketplaceAnunciantes.Models.Dtos.UpdateCampaignRequest)">
+            <summary>RF-F2: actualiza una campaña.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.CampaignsController.Delete(System.Guid)">
+            <summary>RF-F2: elimina una campaña (cascada de creativos y targeting).</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.CampaignsController.Activate(System.Guid)">
+            <summary>RF-F2: activa una campaña (Draft -> Active).</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.CampaignsController.Resume(System.Guid)">
+            <summary>RF-F2: reanuda una campaña pausada (Paused -> Active) si tiene presupuesto disponible.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.CampaignsController.Pause(System.Guid)">
+            <summary>RF-F2: pausa una campaña (-> Paused).</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.CampaignsController.Complete(System.Guid)">
+            <summary>RF-F2: completa una campaña (-> Completed).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Controllers.CreativesController">
+            <summary>Gestiona los creativos de una campaña (RF-F3): alta, listado y baja.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.CreativesController.Add(System.Guid,PublicidadMarketplaceAnunciantes.Models.Dtos.CreateCreativeRequest)">
+            <summary>RF-F3: agrega un creativo a la campaña.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.CreativesController.List(System.Guid,PublicidadMarketplaceAnunciantes.Common.PaginationQuery)">
+            <summary>RF-F3: lista los creativos de la campaña (paginado).</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.CreativesController.Delete(System.Guid,System.Guid)">
+            <summary>RF-F3: elimina un creativo de la campaña.</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Controllers.InventoryController">
+            <summary>Gestiona el inventario de espacios publicitarios (RF-F5): CRUD y listado paginado.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.InventoryController.Create(PublicidadMarketplaceAnunciantes.Models.Dtos.CreateAdSlotRequest)">
+            <summary>RF-F5: crea un espacio publicitario de inventario.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.InventoryController.Estimate(PublicidadMarketplaceAnunciantes.Models.Dtos.EstimateInventoryRequest)">
+            <summary>
+            RF-F4/RF-F5: estima el inventario disponible para unos criterios de targeting, a partir de
+            los espacios monetizables que coinciden en placement y brand safety. No modela CPM histórico
+            (RF-F8 no expone esa fuente en este bounded context), por lo que estimatedCpm es un valor de
+            referencia fijo y se documenta en notes.
+            </summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.InventoryController.List(PublicidadMarketplaceAnunciantes.Common.PaginationQuery)">
+            <summary>RF-F5: listado paginado de espacios publicitarios.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.InventoryController.GetById(System.Guid)">
+            <summary>RF-F5: obtiene un espacio publicitario por su Id.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.InventoryController.Update(System.Guid,PublicidadMarketplaceAnunciantes.Models.Dtos.UpdateAdSlotRequest)">
+            <summary>RF-F5: actualiza un espacio publicitario.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.InventoryController.Delete(System.Guid)">
+            <summary>RF-F5: elimina un espacio publicitario.</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Controllers.MeasurementController">
+            <summary>
+            Medición publicitaria (RF-F7): registra eventos de impresión y clic, acumula el gasto
+            de la campaña y la completa automáticamente al agotar el presupuesto.
+            </summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.MeasurementController.RecordEvent(PublicidadMarketplaceAnunciantes.Models.Dtos.CreateAdEventRequest)">
+            <summary>RF-F7: registra un evento de medición (Impression | Click) e incrementa el gasto de la campaña.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.MeasurementController.GetEvent(System.Guid)">
+            <summary>RF-F7: obtiene un evento de medición por su Id.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.MeasurementController.ListEvents(PublicidadMarketplaceAnunciantes.Common.PaginationQuery,System.Nullable{System.Guid},System.String)">
+            <summary>RF-F7: listado paginado de eventos, con filtros opcionales por campaña y tipo.</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Controllers.ReportingController">
+            <summary>
+            Reporting de campañas (RF-F8): consolida las métricas medidas (impresiones, clics, CTR,
+            gasto y presupuesto restante) a partir de los eventos registrados.
+            </summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.ReportingController.GetCampaignReport(System.Guid)">
+            <summary>RF-F8: reporte de desempeño de una campaña (impresiones, clics, CTR, gasto, presupuesto restante).</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.ReportingController.ListInvoices(System.Guid,PublicidadMarketplaceAnunciantes.Common.PaginationQuery,System.Nullable{System.DateTime},System.Nullable{System.DateTime})">
+            <summary>RF-F8: lista las invoices del anunciante, opcionalmente filtradas por periodo.</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Controllers.TargetingController">
+            <summary>Gestiona el targeting (uno-a-uno) de una campaña (RF-F4): definir/reemplazar y consultar.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.TargetingController.Set(System.Guid,PublicidadMarketplaceAnunciantes.Models.Dtos.SetTargetingRequest)">
+            <summary>RF-F4: define o reemplaza el targeting de la campaña.</summary>
+        </member>
+        <member name="M:PublicidadMarketplaceAnunciantes.Controllers.TargetingController.Get(System.Guid)">
+            <summary>RF-F4: obtiene el targeting de la campaña.</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Data.PublicidadMarketplaceAnunciantesDbContext">
+            <summary>Contexto EF Core del bounded context PublicidadMarketplaceAnunciantes.</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.AdCampaign">
+            <summary>Campaña publicitaria de un anunciante (RF-F2).</summary>
+        </member>
+        <member name="P:PublicidadMarketplaceAnunciantes.Models.AdCampaign.Creatives">
+            <summary>Creativos asociados a la campaña (RF-F3).</summary>
+        </member>
+        <member name="P:PublicidadMarketplaceAnunciantes.Models.AdCampaign.Targeting">
+            <summary>Targeting (uno-a-uno) de la campaña (RF-F4).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.AdEvent">
+            <summary>Evento de medición publicitaria: impresión o clic (RF-F7).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.AdSlot">
+            <summary>Espacio publicitario disponible en el inventario (RF-F5).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Advertiser">
+            <summary>Anunciante del marketplace de publicidad (RF-F1).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Creative">
+            <summary>Creativo publicitario hijo de una campaña (RF-F3).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.AdDecisionResponse">
+            <summary>Decisión de entrega de anuncio devuelta por el ad server (RF-F6).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.CreateAdvertiserRequest">
+            <summary>Request para crear un anunciante (RF-F1).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.UpdateAdvertiserRequest">
+            <summary>Request para actualizar un anunciante (RF-F1).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.AdvertiserResponse">
+            <summary>Response de un anunciante (RF-F1).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.CreateCampaignRequest">
+            <summary>Request para crear una campaña (RF-F2).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.UpdateCampaignRequest">
+            <summary>Request para actualizar una campaña (RF-F2).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.CampaignResponse">
+            <summary>Response de una campaña (RF-F2).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.CreateCreativeRequest">
+            <summary>Request para agregar un creativo a una campaña (RF-F3).</summary>
+        </member>
+        <member name="P:PublicidadMarketplaceAnunciantes.Models.Dtos.CreateCreativeRequest.Type">
+            <summary>Tipo del creativo: VideoAd | Banner.</summary>
+        </member>
+        <member name="P:PublicidadMarketplaceAnunciantes.Models.Dtos.CreateCreativeRequest.PolicyReviewStatus">
+            <summary>Estado de revisión de políticas: Pending | Approved | Rejected. Default Pending.</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.CreativeResponse">
+            <summary>Response de un creativo (RF-F3).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.CreateAdSlotRequest">
+            <summary>Request para crear un espacio publicitario de inventario (RF-F5).</summary>
+        </member>
+        <member name="P:PublicidadMarketplaceAnunciantes.Models.Dtos.CreateAdSlotRequest.Placement">
+            <summary>Ubicación: PreRoll | MidRoll | PostRoll | Banner.</summary>
+        </member>
+        <member name="P:PublicidadMarketplaceAnunciantes.Models.Dtos.CreateAdSlotRequest.BrandSafetyLevel">
+            <summary>Nivel de brand safety: Standard | Limited | Restricted.</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.UpdateAdSlotRequest">
+            <summary>Request para actualizar un espacio publicitario de inventario (RF-F5).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.AdSlotResponse">
+            <summary>Response de un espacio publicitario de inventario (RF-F5).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.EstimateInventoryRequest">
+            <summary>Criterios usados para estimar inventario antes de activar una campaña (RF-F4/RF-F5).</summary>
+        </member>
+        <member name="P:PublicidadMarketplaceAnunciantes.Models.Dtos.EstimateInventoryRequest.Countries">
+            <summary>CSV de códigos ISO-2.</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.InventoryEstimateResponse">
+            <summary>Resultado de la estimación de inventario disponible (RF-F4/RF-F5).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.CreateAdEventRequest">
+            <summary>Request para registrar un evento de medición (RF-F7).</summary>
+        </member>
+        <member name="P:PublicidadMarketplaceAnunciantes.Models.Dtos.CreateAdEventRequest.Type">
+            <summary>Tipo del evento: Impression | Click | Skip.</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.AdEventResponse">
+            <summary>Response de un evento de medición (RF-F7).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.CampaignReportResponse">
+            <summary>Response del reporte de desempeño de una campaña (RF-F8).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.InvoiceResponse">
+            <summary>Response de una factura de anunciante (RF-F8).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.SetTargetingRequest">
+            <summary>Request para definir/reemplazar el targeting de una campaña (RF-F4). Listas como CSV.</summary>
+        </member>
+        <member name="P:PublicidadMarketplaceAnunciantes.Models.Dtos.SetTargetingRequest.Countries">
+            <summary>Países objetivo: CSV de códigos ISO-2 (p.ej. "CL,AR,MX").</summary>
+        </member>
+        <member name="P:PublicidadMarketplaceAnunciantes.Models.Dtos.SetTargetingRequest.Interests">
+            <summary>Intereses objetivo: CSV (p.ej. "gaming,tech").</summary>
+        </member>
+        <member name="P:PublicidadMarketplaceAnunciantes.Models.Dtos.SetTargetingRequest.Keywords">
+            <summary>Palabras clave: CSV.</summary>
+        </member>
+        <member name="P:PublicidadMarketplaceAnunciantes.Models.Dtos.SetTargetingRequest.ContentCategories">
+            <summary>Categorías de contenido elegibles: CSV.</summary>
+        </member>
+        <member name="P:PublicidadMarketplaceAnunciantes.Models.Dtos.SetTargetingRequest.ExcludedCatalogItemIds">
+            <summary>Contenidos excluidos por brand safety: CSV de UUIDs.</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Dtos.TargetingResponse">
+            <summary>Response del targeting de una campaña (RF-F4).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.CampaignStatus">
+            <summary>Estado de una campaña publicitaria (RF-F2).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.CreativeType">
+            <summary>Tipo de creativo publicitario (RF-F3).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.PolicyReviewStatus">
+            <summary>Estado de revisión de políticas de un creativo (RF-F3).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Placement">
+            <summary>Ubicación del espacio publicitario en el inventario (RF-F5).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.BrandSafetyLevel">
+            <summary>Nivel de brand safety de un espacio o decisión de entrega (RF-F5/RF-F6).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.AdEventType">
+            <summary>Tipo de evento de medición publicitaria (RF-F7).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.InvoiceStatus">
+            <summary>Estado de una factura de anunciante (RF-F8).</summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Invoice">
+            <summary>
+            Factura de un anunciante por un periodo (RF-F8). No existe en el OpenAPI ningún endpoint de
+            creación: este bounded context solo expone lectura (GET /api/reporting/invoices/{advertiserId}).
+            La generación de invoices (p.ej. un job periódico de facturación) está fuera del alcance de los
+            archivos provistos.
+            </summary>
+        </member>
+        <member name="T:PublicidadMarketplaceAnunciantes.Models.Targeting">
+            <summary>Targeting (uno-a-uno) de una campaña (RF-F4). Listas como CSV.</summary>
+        </member>
+        <member name="P:PublicidadMarketplaceAnunciantes.Models.Targeting.Countries">
+            <summary>Países objetivo: CSV de códigos ISO-2 (p.ej. "CL,AR,MX").</summary>
+        </member>
+        <member name="P:PublicidadMarketplaceAnunciantes.Models.Targeting.Interests">
+            <summary>Intereses objetivo: CSV (p.ej. "gaming,tech").</summary>
+        </member>
+        <member name="P:PublicidadMarketplaceAnunciantes.Models.Targeting.Keywords">
+            <summary>Palabras clave: CSV.</summary>
+        </member>
+        <member name="P:PublicidadMarketplaceAnunciantes.Models.Targeting.ContentCategories">
+            <summary>Categorías de contenido elegibles: CSV.</summary>
+        </member>
+        <member name="P:PublicidadMarketplaceAnunciantes.Models.Targeting.ExcludedCatalogItemIds">
+            <summary>Contenidos excluidos por brand safety: CSV de UUIDs.</summary>
+        </member>
+    </members>
+</doc>

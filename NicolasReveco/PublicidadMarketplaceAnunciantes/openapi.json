@@ -1,0 +1,671 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PublicidadMarketplaceAnunciantes API",
+    "version": "1.0.0",
+    "description": "Gestiona el marketplace de publicidad: anunciantes, campañas, creativos, targeting, inventario, entrega de anuncios, medición (impresiones/clics) y reporting. Referencia contenido/canales por UUID para targeting; no almacena metadata del contenido."
+  },
+  "servers": [
+    { "url": "http://localhost:5006", "description": "Entorno local de desarrollo" }
+  ],
+  "security": [
+    { "ApiKey": [] }
+  ],
+  "tags": [
+    { "name": "Advertisers", "description": "RF-F1 anunciantes" },
+    { "name": "Campaigns", "description": "RF-F2 campañas" },
+    { "name": "Creatives", "description": "RF-F3 creativos" },
+    { "name": "Targeting", "description": "RF-F4 targeting" },
+    { "name": "Inventory", "description": "RF-F5 inventario" },
+    { "name": "AdServing", "description": "RF-F6 entrega de anuncios" },
+    { "name": "Measurement", "description": "RF-F7 medición" },
+    { "name": "Reporting", "description": "RF-F8 reporting" }
+  ],
+  "paths": {
+    "/api/advertisers": {
+      "get": {
+        "tags": ["Advertisers"],
+        "summary": "RF-F1: listado paginado de anunciantes",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultAdvertiserResponse" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      },
+      "post": {
+        "tags": ["Advertisers"],
+        "summary": "RF-F1: crea un anunciante",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateAdvertiserRequest" } } } },
+        "responses": {
+          "201": { "description": "Creado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdvertiserResponse" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/advertisers/{id}": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
+      "get": {
+        "tags": ["Advertisers"],
+        "summary": "RF-F1: obtiene un anunciante por Id",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdvertiserResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Advertisers"],
+        "summary": "RF-F1: actualiza un anunciante",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateAdvertiserRequest" } } } },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdvertiserResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Advertisers"],
+        "summary": "RF-F1: elimina un anunciante",
+        "responses": {
+          "204": { "description": "Sin contenido" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/campaigns": {
+      "get": {
+        "tags": ["Campaigns"],
+        "summary": "RF-F2: listado paginado de campañas",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" },
+          { "name": "advertiserId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["Draft", "Active", "Paused", "Completed"] } }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultCampaignResponse" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      },
+      "post": {
+        "tags": ["Campaigns"],
+        "summary": "RF-F2: crea una campaña (Draft)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateCampaignRequest" } } } },
+        "responses": {
+          "201": { "description": "Creada", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CampaignResponse" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/campaigns/{id}": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
+      "get": {
+        "tags": ["Campaigns"],
+        "summary": "RF-F2: obtiene una campaña por Id",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CampaignResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Campaigns"],
+        "summary": "RF-F2: actualiza una campaña",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateCampaignRequest" } } } },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CampaignResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Campaigns"],
+        "summary": "RF-F2: elimina una campaña (cascada de creativos y targeting)",
+        "responses": {
+          "204": { "description": "Sin contenido" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/campaigns/{id}/activate": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
+      "post": {
+        "tags": ["Campaigns"],
+        "summary": "RF-F2: activa una campaña (Draft -> Active)",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CampaignResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/campaigns/{id}/pause": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
+      "post": {
+        "tags": ["Campaigns"],
+        "summary": "RF-F2: pausa una campaña (-> Paused)",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CampaignResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/campaigns/{id}/resume": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
+      "post": {
+        "tags": ["Campaigns"],
+        "summary": "RF-F2: reanuda una campaña pausada si tiene presupuesto disponible.",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CampaignResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": { "$ref": "#/components/responses/Conflict" }
+        }
+      }
+    },
+    "/api/campaigns/{id}/complete": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
+      "post": {
+        "tags": ["Campaigns"],
+        "summary": "RF-F2: completa una campaña (-> Completed)",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CampaignResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/campaigns/{campaignId}/creatives": {
+      "parameters": [ { "name": "campaignId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } } ],
+      "get": {
+        "tags": ["Creatives"],
+        "summary": "RF-F3: lista los creativos de una campaña (paginado)",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultCreativeResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "post": {
+        "tags": ["Creatives"],
+        "summary": "RF-F3: agrega un creativo a la campaña",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateCreativeRequest" } } } },
+        "responses": {
+          "201": { "description": "Creado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreativeResponse" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/campaigns/{campaignId}/creatives/{creativeId}": {
+      "parameters": [
+        { "name": "campaignId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+        { "name": "creativeId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+      ],
+      "delete": {
+        "tags": ["Creatives"],
+        "summary": "RF-F3: elimina un creativo de la campaña",
+        "responses": {
+          "204": { "description": "Sin contenido" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/campaigns/{campaignId}/targeting": {
+      "parameters": [ { "name": "campaignId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } } ],
+      "get": {
+        "tags": ["Targeting"],
+        "summary": "RF-F4: obtiene el targeting de la campaña",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TargetingResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Targeting"],
+        "summary": "RF-F4: define o reemplaza el targeting de la campaña",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SetTargetingRequest" } } } },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TargetingResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/inventory/estimate": {
+      "post": {
+        "tags": ["Inventory"],
+        "summary": "RF-F4/RF-F5: estima inventario disponible para criterios de targeting.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EstimateInventoryRequest" } } } },
+        "responses": {
+          "200": { "description": "Estimación de inventario disponible.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InventoryEstimateResponse" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/inventory": {
+      "get": {
+        "tags": ["Inventory"],
+        "summary": "RF-F5: listado paginado de espacios de inventario elegibles para anuncios",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultAdSlotResponse" } } } }
+        }
+      },
+      "post": {
+        "tags": ["Inventory"],
+        "summary": "RF-F5: crea un espacio publicitario",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateAdSlotRequest" } } } },
+        "responses": {
+          "201": { "description": "Creado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdSlotResponse" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    },
+    "/api/inventory/{id}": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
+      "get": {
+        "tags": ["Inventory"],
+        "summary": "RF-F5: obtiene un espacio de inventario por Id",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdSlotResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "put": {
+        "tags": ["Inventory"],
+        "summary": "RF-F5: actualiza un espacio de inventario",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateAdSlotRequest" } } } },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdSlotResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      },
+      "delete": {
+        "tags": ["Inventory"],
+        "summary": "RF-F5: elimina un espacio de inventario",
+        "responses": {
+          "204": { "description": "Sin contenido" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/ads/serve": {
+      "get": {
+        "tags": ["AdServing"],
+        "summary": "RF-F6: decide y entrega un anuncio considerando targeting, presupuesto y brand safety",
+        "parameters": [
+          { "name": "placement", "in": "query", "schema": { "type": "string", "enum": ["PreRoll", "MidRoll", "PostRoll", "Banner"] } },
+          { "name": "country", "in": "query", "schema": { "type": "string", "description": "Código ISO-2" } },
+          { "name": "interest", "in": "query", "schema": { "type": "string" } },
+          { "name": "catalogItemId", "in": "query", "schema": { "type": "string", "format": "uuid" }, "description": "Contenido donde aparece la oportunidad publicitaria." },
+          { "name": "brandSafetyLevel", "in": "query", "schema": { "type": "string", "enum": ["Standard", "Limited", "Restricted"] } }
+        ],
+        "responses": {
+          "200": { "description": "Anuncio seleccionado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdDecisionResponse" } } } },
+          "404": { "description": "Sin anuncio elegible (code = NO_FILL)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+        }
+      }
+    },
+    "/api/measurement/events": {
+      "get": {
+        "tags": ["Measurement"],
+        "summary": "RF-F7: listado paginado de eventos de medición",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" },
+          { "name": "campaignId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "type", "in": "query", "schema": { "type": "string", "enum": ["Impression", "Click", "Skip"] } }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultAdEventResponse" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      },
+      "post": {
+        "tags": ["Measurement"],
+        "summary": "RF-F7: registra un evento (Impression|Click|Skip) y acumula gasto en la campaña",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateAdEventRequest" } } } },
+        "responses": {
+          "201": { "description": "Registrado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdEventResponse" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/measurement/events/{id}": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
+      "get": {
+        "tags": ["Measurement"],
+        "summary": "RF-F7: obtiene un evento de medición por Id",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdEventResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/reporting/campaigns/{id}": {
+      "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
+      "get": {
+        "tags": ["Reporting"],
+        "summary": "RF-F8: reporte de desempeño de una campaña con CPM, CTR, gasto e invoice",
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CampaignReportResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/reporting/invoices/{advertiserId}": {
+      "parameters": [
+        { "name": "advertiserId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+      ],
+      "get": {
+        "tags": ["Reporting"],
+        "summary": "RF-F8: lista invoices del anunciante por periodo.",
+        "parameters": [
+          { "name": "from", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "to", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": { "description": "Invoices del anunciante.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PagedResultInvoiceResponse" } } } },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API Key requerida en el header X-API-Key."
+      }
+    },
+    "parameters": {
+      "Page": { "name": "page", "in": "query", "schema": { "type": "integer", "minimum": 1, "default": 1 }, "description": "Número de página (paginación consistente ?page=&pageSize=)." },
+      "PageSize": { "name": "pageSize", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 }, "description": "Tamaño de página (máx. 100)." },
+      "IdPath": { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+    },
+    "responses": {
+      "BadRequest": { "description": "Solicitud inválida", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+      "Unauthorized": { "description": "API Key faltante o inválida", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+      "NotFound": { "description": "Recurso no encontrado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+      "Conflict": { "description": "Conflicto de estado", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "description": "Formato de error consistente entre los 6 bounded contexts.",
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "details": { "type": "object", "nullable": true }
+        },
+        "required": ["code", "message"]
+      },
+      "CreateAdvertiserRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "billingName": { "type": "string", "description": "Razón social o nombre de facturación." },
+          "billingAddress": { "type": "string" },
+          "taxId": { "type": "string", "description": "Identificador fiscal del anunciante." },
+          "paymentMethodToken": { "type": "string", "nullable": true },
+          "balance": { "type": "number", "format": "double" }
+        }
+      },
+      "UpdateAdvertiserRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "billingName": { "type": "string" },
+          "billingAddress": { "type": "string" },
+          "taxId": { "type": "string" },
+          "paymentMethodToken": { "type": "string", "nullable": true },
+          "balance": { "type": "number", "format": "double" }
+        }
+      },
+      "AdvertiserResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "billingName": { "type": "string" },
+          "billingAddress": { "type": "string" },
+          "taxId": { "type": "string" },
+          "balance": { "type": "number", "format": "double" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateCampaignRequest": {
+        "type": "object",
+        "properties": {
+          "advertiserId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "budget": { "type": "number", "format": "double" },
+          "startDate": { "type": "string", "format": "date-time" },
+          "endDate": { "type": "string", "format": "date-time" }
+        }
+      },
+      "UpdateCampaignRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "budget": { "type": "number", "format": "double" },
+          "startDate": { "type": "string", "format": "date-time" },
+          "endDate": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CampaignResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "advertiserId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "budget": { "type": "number", "format": "double" },
+          "spend": { "type": "number", "format": "double" },
+          "status": { "type": "string", "enum": ["Draft", "Active", "Paused", "Completed"] },
+          "startDate": { "type": "string", "format": "date-time" },
+          "endDate": { "type": "string", "format": "date-time" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateCreativeRequest": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string", "enum": ["VideoAd", "Banner"] },
+          "assetUrl": { "type": "string" },
+          "title": { "type": "string" },
+          "policyReviewStatus": { "type": "string", "enum": ["Pending", "Approved", "Rejected"], "default": "Pending" },
+          "policyReviewNotes": { "type": "string", "nullable": true }
+        }
+      },
+      "CreativeResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "campaignId": { "type": "string", "format": "uuid" },
+          "type": { "type": "string", "enum": ["VideoAd", "Banner"] },
+          "assetUrl": { "type": "string" },
+          "title": { "type": "string" },
+          "policyReviewStatus": { "type": "string", "enum": ["Pending", "Approved", "Rejected"] },
+          "policyReviewNotes": { "type": "string", "nullable": true }
+        }
+      },
+      "SetTargetingRequest": {
+        "type": "object",
+        "properties": {
+          "countries": { "type": "string", "description": "CSV de códigos ISO-2 (p.ej. CL,AR,MX)" },
+          "ageMin": { "type": "integer" },
+          "ageMax": { "type": "integer" },
+          "interests": { "type": "string", "description": "CSV de intereses" },
+          "keywords": { "type": "string", "description": "CSV de palabras clave" },
+          "contentCategories": { "type": "string", "description": "CSV de categorías de contenido elegibles." },
+          "excludedCatalogItemIds": { "type": "string", "description": "CSV de contenidos excluidos por brand safety." }
+        }
+      },
+      "TargetingResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "campaignId": { "type": "string", "format": "uuid" },
+          "countries": { "type": "string" },
+          "ageMin": { "type": "integer" },
+          "ageMax": { "type": "integer" },
+          "interests": { "type": "string" },
+          "keywords": { "type": "string" },
+          "contentCategories": { "type": "string" },
+          "excludedCatalogItemIds": { "type": "string" }
+        }
+      },
+      "EstimateInventoryRequest": {
+        "type": "object",
+        "description": "Criterios usados para estimar inventario antes de activar una campaña.",
+        "properties": {
+          "placement": { "type": "string", "enum": ["PreRoll", "MidRoll", "PostRoll", "Banner"] },
+          "countries": { "type": "string", "description": "CSV de códigos ISO-2." },
+          "ageMin": { "type": "integer" },
+          "ageMax": { "type": "integer" },
+          "interests": { "type": "string" },
+          "contentCategories": { "type": "string" },
+          "brandSafetyLevel": { "type": "string", "enum": ["Standard", "Limited", "Restricted"] }
+        }
+      },
+      "InventoryEstimateResponse": {
+        "type": "object",
+        "properties": {
+          "estimatedImpressions": { "type": "integer", "format": "int64" },
+          "eligibleCatalogItems": { "type": "integer", "format": "int64" },
+          "estimatedCpm": { "type": "number", "format": "double" },
+          "notes": { "type": "string", "nullable": true }
+        }
+      },
+      "CreateAdSlotRequest": {
+        "type": "object",
+        "properties": {
+          "placement": { "type": "string", "enum": ["PreRoll", "MidRoll", "PostRoll", "Banner"] },
+          "catalogItemId": { "type": "string", "format": "uuid", "nullable": true },
+          "channelId": { "type": "string", "format": "uuid", "nullable": true },
+          "isContentMonetizable": { "type": "boolean", "description": "Refleja la restricción recibida desde Catálogo/Monetización." },
+          "brandSafetyLevel": { "type": "string", "enum": ["Standard", "Limited", "Restricted"] },
+          "availableImpressions": { "type": "integer", "format": "int64" },
+          "reservedImpressions": { "type": "integer", "format": "int64" }
+        }
+      },
+      "UpdateAdSlotRequest": {
+        "type": "object",
+        "properties": {
+          "placement": { "type": "string", "enum": ["PreRoll", "MidRoll", "PostRoll", "Banner"] },
+          "catalogItemId": { "type": "string", "format": "uuid", "nullable": true },
+          "channelId": { "type": "string", "format": "uuid", "nullable": true },
+          "isContentMonetizable": { "type": "boolean" },
+          "brandSafetyLevel": { "type": "string", "enum": ["Standard", "Limited", "Restricted"] },
+          "availableImpressions": { "type": "integer", "format": "int64" },
+          "reservedImpressions": { "type": "integer", "format": "int64" }
+        }
+      },
+      "AdSlotResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "placement": { "type": "string", "enum": ["PreRoll", "MidRoll", "PostRoll", "Banner"] },
+          "catalogItemId": { "type": "string", "format": "uuid", "nullable": true },
+          "channelId": { "type": "string", "format": "uuid", "nullable": true },
+          "isContentMonetizable": { "type": "boolean" },
+          "brandSafetyLevel": { "type": "string", "enum": ["Standard", "Limited", "Restricted"] },
+          "availableImpressions": { "type": "integer", "format": "int64" },
+          "reservedImpressions": { "type": "integer", "format": "int64" }
+        }
+      },
+      "AdDecisionResponse": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "string", "format": "uuid" },
+          "creativeId": { "type": "string", "format": "uuid" },
+          "creativeType": { "type": "string", "enum": ["VideoAd", "Banner"] },
+          "assetUrl": { "type": "string" },
+          "title": { "type": "string" },
+          "brandSafetyDecision": { "type": "string", "enum": ["Allowed", "Blocked", "Limited"] }
+        }
+      },
+      "CreateAdEventRequest": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "string", "format": "uuid" },
+          "creativeId": { "type": "string", "format": "uuid" },
+          "type": { "type": "string", "enum": ["Impression", "Click", "Skip"] },
+          "catalogItemId": { "type": "string", "format": "uuid", "nullable": true },
+          "costPerEvent": { "type": "number", "format": "double" }
+        }
+      },
+      "AdEventResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "campaignId": { "type": "string", "format": "uuid" },
+          "creativeId": { "type": "string", "format": "uuid" },
+          "type": { "type": "string", "enum": ["Impression", "Click", "Skip"] },
+          "catalogItemId": { "type": "string", "format": "uuid", "nullable": true },
+          "costPerEvent": { "type": "number", "format": "double" },
+          "occurredAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CampaignReportResponse": {
+        "type": "object",
+        "properties": {
+          "campaignId": { "type": "string", "format": "uuid" },
+          "impressions": { "type": "integer", "format": "int64" },
+          "clicks": { "type": "integer", "format": "int64" },
+          "skips": { "type": "integer", "format": "int64" },
+          "ctr": { "type": "number", "format": "double" },
+          "cpm": { "type": "number", "format": "double" },
+          "spend": { "type": "number", "format": "double" },
+          "remainingBudget": { "type": "number", "format": "double" },
+          "invoiceId": { "type": "string", "format": "uuid", "nullable": true }
+        }
+      },
+      "InvoiceResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "advertiserId": { "type": "string", "format": "uuid" },
+          "periodStart": { "type": "string", "format": "date-time" },
+          "periodEnd": { "type": "string", "format": "date-time" },
+          "impressions": { "type": "integer", "format": "int64" },
+          "clicks": { "type": "integer", "format": "int64" },
+          "cpm": { "type": "number", "format": "double" },
+          "totalSpend": { "type": "number", "format": "double" },
+          "status": { "type": "string", "enum": ["Draft", "Issued", "Paid", "Overdue"] },
+          "issuedAt": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "PagedResultAdvertiserResponse": { "$ref": "#/components/schemas/PagedResultBase", "description": "items = AdvertiserResponse[]" },
+      "PagedResultCampaignResponse": { "$ref": "#/components/schemas/PagedResultBase" },
+      "PagedResultCreativeResponse": { "$ref": "#/components/schemas/PagedResultBase" },
+      "PagedResultAdSlotResponse": { "$ref": "#/components/schemas/PagedResultBase" },
+      "PagedResultAdEventResponse": { "$ref": "#/components/schemas/PagedResultBase" },
+      "PagedResultInvoiceResponse": { "$ref": "#/components/schemas/PagedResultBase", "description": "items = InvoiceResponse[]" },
+      "PagedResultBase": {
+        "type": "object",
+        "description": "Envoltura de paginación consistente: { items, page, pageSize, totalItems, totalPages }.",
+        "properties": {
+          "items": { "type": "array", "items": { "type": "object" } },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "totalItems": { "type": "integer" },
+          "totalPages": { "type": "integer" }
+        }
+      }
+    }
+  }
+}
