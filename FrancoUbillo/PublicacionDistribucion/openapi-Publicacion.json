@@ -100,6 +100,133 @@
         }
       }
     },
+        "/api/videoassets/{id}/upload": {
+      "delete": {
+        "tags": ["VideoAssets"],
+        "summary": "RF-P1: Cancela una subida en curso",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "204": { "description": "Subida cancelada exitosamente." },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" },
+          "409": {
+            "description": "No se puede cancelar porque el asset ya está procesando o ya fue procesado.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/videoassets/{id}/upload-progress": {
+      "get": {
+        "tags": ["VideoAssets"],
+        "summary": "RF-P1: Consulta el progreso de la subida (porcentaje o bytes subidos)",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Progreso de la subida.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/UploadProgressResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/videoassets/{id}/retry-process": {
+      "post": {
+        "tags": ["VideoAssets"],
+        "summary": "RF-P2: Reintenta el procesamiento de un asset que falló",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdParam" }
+        ],
+        "responses": {
+          "202": {
+            "description": "Reintento de procesamiento aceptado.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/VideoAssetResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "El asset no está en estado Failed, no se puede reintentar.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/playback-sessions": {
+      "post": {
+        "tags": ["Playback"],
+        "summary": "RF-P3: Inicia una sesión de reproducción",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreatePlaybackSessionRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Sesión iniciada.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PlaybackSessionResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/playback-sessions/{sessionId}": {
+      "patch": {
+        "tags": ["Playback"],
+        "summary": "RF-P3: Actualiza el progreso o finaliza la sesión de reproducción (envía métricas)",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdatePlaybackProgressRequest" }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "Progreso actualizado correctamente." },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "description": "Sesión no encontrada." }
+        }
+      }
+    },
     "/api/videoassets/{id}/process": {
       "post": {
         "tags": ["VideoAssets"],
@@ -260,6 +387,46 @@
       }
     },
     "schemas": {
+            "UploadProgressResponse": {
+        "type": "object",
+        "properties": {
+          "videoAssetId": { "type": "string", "format": "uuid" },
+          "status": { "type": "string", "enum": ["Uploading", "Uploaded", "Processing", "Ready", "Failed"] },
+          "bytesUploaded": { "type": "integer", "format": "int64" },
+          "totalBytes": { "type": "integer", "format": "int64" },
+          "percentage": { "type": "number", "format": "float" }
+        }
+      },
+      "CreatePlaybackSessionRequest": {
+        "type": "object",
+        "required": ["videoAssetId", "userId"],
+        "properties": {
+          "videoAssetId": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "device": { "type": "string" },
+          "region": { "type": "string" }
+        }
+      },
+      "PlaybackSessionResponse": {
+        "type": "object",
+        "properties": {
+          "sessionId": { "type": "string", "format": "uuid" },
+          "videoAssetId": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "startedAt": { "type": "string", "format": "date-time" },
+          "device": { "type": "string" },
+          "region": { "type": "string" }
+        }
+      },
+      "UpdatePlaybackProgressRequest": {
+        "type": "object",
+        "properties": {
+          "watchTimeSeconds": { "type": "number" },
+          "qualityUsed": { "type": "string" },
+          "interruptions": { "type": "integer" },
+          "ended": { "type": "boolean" }
+        }
+      },
       "VideoStatus": {
         "type": "string",
         "description": "Estado técnico del asset de video.",

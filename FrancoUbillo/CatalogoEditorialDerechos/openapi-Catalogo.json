@@ -132,6 +132,58 @@
         }
       }
     },
+        "/api/catalogitems/{id}/visibility": {
+      "get": {
+        "tags": ["CatalogItems"],
+        "summary": "RF-C3: Consulta si el contenido es visible para un usuario específico (por país, edad, moderación)",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdPath" },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resultado de visibilidad.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/VisibilityCheckResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/catalogitems/{id}/policy-history": {
+      "get": {
+        "tags": ["CatalogItems"],
+        "summary": "RF-C6: Obtiene el historial de cambios de política / restricciones del contenido",
+        "parameters": [
+          { "$ref": "#/components/parameters/IdPath" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista del historial de políticas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/PolicyHistoryEntry" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/api/catalogitems/{id}/publish": {
       "parameters": [ { "$ref": "#/components/parameters/IdPath" } ],
       "post": {
@@ -367,6 +419,26 @@
       }
     },
     "schemas": {
+            "VisibilityCheckResponse": {
+        "type": "object",
+        "properties": {
+          "visible": { "type": "boolean" },
+          "reason": {
+            "type": "string",
+            "nullable": true,
+            "enum": [null, "AGE_RESTRICTED", "COUNTRY_BLOCKED", "MODERATION_PENDING", "UNLISTED", "PRIVATE", "CLAIM_RESTRICTED"]
+          }
+        }
+      },
+      "PolicyHistoryEntry": {
+        "type": "object",
+        "properties": {
+          "changedAt": { "type": "string", "format": "date-time" },
+          "field": { "type": "string" },
+          "oldValue": { "type": "object", "nullable": true },
+          "newValue": { "type": "object", "nullable": true }
+        }
+      },
       "Visibility": {
         "type": "string",
         "enum": ["Draft", "Public", "Unlisted", "Private"]
